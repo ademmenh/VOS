@@ -1,9 +1,10 @@
 bits 16
 jmp boot 
-%include "vos/boot/utils/print.asm"
-%include "vos/boot/utils/newline.asm"
+%include "vos/boot/utils/console.asm"
+%include "vos/boot/utils/vga.asm"
 
 msg:    db "This is VOS", 0
+vga_message: db "this is from vga", 0
 
 boot:
     ; disable hardware interupts
@@ -22,11 +23,16 @@ boot:
     ; 8kib = 0x2000
     mov sp, 0x2000
 
-    ; print msg
     push msg
     call print
     add sp, 2
     call newline
+    
+
+    push 0x0f
+    push vga_message
+    call writeToVga
+    add sp, 4
 
     hlt
 
