@@ -1,3 +1,4 @@
+; usage:
 ; push msg
 ; call print
 ; add sp, 2
@@ -23,6 +24,7 @@ print:
         ret
 
 
+; usage:
 ; call new line
 newline:
     push ax
