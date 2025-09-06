@@ -5,13 +5,6 @@ jmp boot
 
 msg:    db "This is VOS", 0
 
-DAP:
-    db 0x10
-    db 0x00
-    dw 0
-    dw 0, 0
-    dw 0, 0, 0, 0
-
 boot:
     ; disable hardware interupts
     cli
