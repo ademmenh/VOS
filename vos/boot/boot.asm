@@ -1,43 +1,25 @@
-bits 16
-jmp boot 
-%include "vos/boot/utils/console.asm"
-%include "vos/boot/utils/disk.asm"
+bits 32
+global start
+extern main
 
-msg:    db "This is VOS", 0
+section .text
+    align 4
+    dd 0x1BADB002
+    dd 0x00000000
+    dd -(0x1BADB002 + 0x00000000)
 
-boot:
-    ; disable hardware interupts
-    cli
-    
-    ; setup the data segment
-    mov ax, 0x7C0
-    mov ds, ax
-    
-    ; setup the stack segment 
-    ; the MBR size
-    ; 0x200 = 512 bytes
-    add ax, 0x200
-    mov ss, ax
-    ; Stack size is 8Kib
-    ; 8kib = 0x2000
-    mov sp, 0x2000
+    start:
+        cli
+        mov esp, stack_space
+        call main
+        hlt
 
-    push msg
-    call print
-    add sp, 2
-    call newline
-    
-    call init_disk
-    
-    push 0x100
-    push 0x0000
-    push 17
-    push 0x0000
-    push 0x0000
-    call read_disk_lba
-    add sp, 10
-    
-    hlt
+    halt:
+        cli
+        hlt
+        jmp halt
 
-times 510-($-$$) db 0
-dw 0xAA55
+
+section .bss:
+    resb 8192
+    stack_space:
