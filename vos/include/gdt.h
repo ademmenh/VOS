@@ -8,7 +8,7 @@ typedef struct GdtEntry{
     uint16_t base_low;
     uint8_t  base_middle;
     uint8_t  access;
-    uint8_t  limit_and_falgs;
+    uint8_t  limit_and_flags;
     uint8_t  base_high;
 } __attribute__((packed)) GdtEntry;
 

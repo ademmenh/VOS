@@ -10,7 +10,7 @@ gdt_flush:
     mov es, ax
     mov fs, ax
     mov gs, ax
-    jmp 0x08:.gdt_flush
+    jmp 0x08:.flush
 
     .flush:
         ret

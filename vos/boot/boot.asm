@@ -20,6 +20,6 @@ section .text
         jmp halt
 
 
-section .bss:
+section .bss
     resb 8192
     stack_space:
