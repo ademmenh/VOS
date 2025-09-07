@@ -1,1 +1,5 @@
-void main () {}
+#include "gdt.h"
+
+void main () {
+    initGdt();
+}
