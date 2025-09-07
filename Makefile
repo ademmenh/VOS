@@ -1,3 +1,4 @@
+PACKAGE_MGR	:= dnf
 ASM			:= nasm
 GCC			:= gcc
 LINKER		:= ld
@@ -24,6 +25,9 @@ ISO				:= $(BUILD_DIR)/vos.iso
 .PHONY: all setup bins iso emulate clean
 
 all: iso
+
+dependencies:
+	sudo $(PACKAGE_MGR) install $(ASM) $(GCC) $(LINKER) $(QEMU) glibc-devel.i686 libgcc.i686
 
 clean:
 	rm -rf $(BUILD_DIR) $(ISO_DIR)
