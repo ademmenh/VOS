@@ -1,9 +1,6 @@
 #include "gdt.h"
 #include "tss.h"
 
-extern void gdt_flush(uint32_t);
-extern void tss_flush();
-
 #define GDT_ENTRIES_NUMBER 6
 GdtEntry gdt_entries [GDT_ENTRIES_NUMBER];
 GdtPtr gdt_ptr;

@@ -44,7 +44,8 @@ asm_bins:
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/boot/boot.asm -o $(BUILD_DIR)/objects/boot.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/gdt.asm -o $(BUILD_DIR)/objects/gdt.s.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/tss.asm -o $(BUILD_DIR)/objects/tss.s.o
-	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/utils/io_ports.asm -o $(BUILD_DIR)/objects/io_ports.s.o
+	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/utils/io.asm -o $(BUILD_DIR)/objects/io.s.o
+	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/idt.asm -o $(BUILD_DIR)/objects/idt.s.o
 
 link:
 	$(LINKER) $(LINKER_FLAGS) -T $(SRC_DIR)/linker.ld build/objects/*.o -o $(BUILD_DIR)/vos.bin

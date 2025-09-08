@@ -1,9 +1,9 @@
-#include <stdint.h>
-
 #ifndef TSS_H
 #define TSS_H
 
-typedef struct TssEntry {
+#include <stdint.h>
+
+typedef struct {
     uint32_t previous;
     uint32_t esp0;
     uint32_t ss0;
