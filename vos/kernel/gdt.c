@@ -1,8 +1,10 @@
 #include "gdt.h"
+#include "tss.h"
 
 extern void gdt_flush(uint32_t);
+extern void tss_flush();
 
-#define GDT_ENTRIES_NUMBER 5
+#define GDT_ENTRIES_NUMBER 6
 GdtEntry gdt_entries [GDT_ENTRIES_NUMBER];
 GdtPtr gdt_ptr;
 
@@ -14,7 +16,9 @@ void initGdt(){
     setGdtGate(2, 0, 0xFFFFFFFF, 0x92, 0xCF);   // Kernel Data Segment
     setGdtGate(3, 0, 0xFFFFFFFF, 0xFA, 0xCF);   // User Code Segment
     setGdtGate(4, 0, 0xFFFFFFFF, 0xFA, 0xCF);   // User Data Segment
+    writeTss(5, 0x10, 0x0);
     gdt_flush((uint32_t)&gdt_ptr);
+    tss_flush();
 }
 
 void setGdtGate(uint32_t index, uint32_t base, uint32_t limit, uint8_t access, uint8_t flags){

@@ -6,7 +6,7 @@ GRUB_MAKE	:= grub2-mkrescue
 QEMU		:= qemu-system-i386
 GDB			:= gdb
 
-GCC_FLAGS			:= -m32 -fno-stack-protector -fno-builtin -I vos/include
+GCC_FLAGS			:= -m32 -fno-stack-protector -fno-builtin
 GCC_FLAGS			+= -I vos/include
 GCC_DEBUG_FLAGS		:= -g
 ASM_FLAGS			:= -f elf32
@@ -18,11 +18,8 @@ QEMU_DEBUG_FLAGS	:= -s -S
 BUILD_DIR			:= build
 ISO_DIR				:= iso
 SRC_DIR				:= vos
-SRC_DIR_TMP			:= vos/boot
-SRC_FILES			:= $(wildcard $(SRC_DIR_TMP)/*.c)
-ASM_SRC_FILES		:= $(wildcard $(SRC_DIR_TMP)/*.asm)
 SRC_DIR_TMP			:= vos/kernel
-SRC_FILES			+= $(wildcard $(SRC_DIR_TMP)/*.c)
+SRC_FILES			+= $(wildcard $(SRC_DIR_TMP)/*.c $(SRC_DIR_TMP)/**/*.c)
 ISO					:= $(BUILD_DIR)/vos.iso
 DISO				:= $(BUILD_DIR)/vos.iso
 
@@ -44,8 +41,9 @@ c_bins:
 	@mv *.o $(BUILD_DIR)/objects
 
 asm_bins:
-	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/boot/boot.asm -o $(BUILD_DIR)/objects/boot.s.o
-	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/boot/gdt.asm -o $(BUILD_DIR)/objects/gdt.s.o
+	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/boot/boot.asm -o $(BUILD_DIR)/objects/boot.o
+	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/gdt.asm -o $(BUILD_DIR)/objects/gdt.s.o
+	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/tss.asm -o $(BUILD_DIR)/objects/tss.s.o
 
 link:
 	$(LINKER) $(LINKER_FLAGS) -T $(SRC_DIR)/linker.ld build/objects/*.o -o $(BUILD_DIR)/vos.bin
