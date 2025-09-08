@@ -44,13 +44,14 @@ asm_bins:
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/boot/boot.asm -o $(BUILD_DIR)/objects/boot.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/gdt.asm -o $(BUILD_DIR)/objects/gdt.s.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/tss.asm -o $(BUILD_DIR)/objects/tss.s.o
+	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/utils/io_ports.asm -o $(BUILD_DIR)/objects/io_ports.s.o
 
 link:
 	$(LINKER) $(LINKER_FLAGS) -T $(SRC_DIR)/linker.ld build/objects/*.o -o $(BUILD_DIR)/vos.bin
 
-bins: setup c_bins asm_bins link
+bins: c_bins asm_bins link
 
-$(ISO): bins
+$(ISO): setup bins
 	@mkdir -p $(ISO_DIR)/boot/grub
 	@cp grub/grub.cfg $(ISO_DIR)/boot/grub/grub.cfg
 	cp $(BUILD_DIR)/vos.bin iso/boot/vos.bin
@@ -68,9 +69,9 @@ c_debug_bins:
 	$(GCC) $(GCC_DEBUG_FLAGS) $(GCC_FLAGS) -c $(SRC_FILES)
 	@mv *.o $(BUILD_DIR)/objects
 
-debug_bins: setup c_debug_bins asm_bins link
+debug_bins: c_debug_bins asm_bins link
 
-$(DISO): debug_bins
+$(DISO): setup debug_bins
 	@mkdir -p $(ISO_DIR)/boot/grub
 	@cp grub/grub.cfg $(ISO_DIR)/boot/grub/grub.cfg
 	cp $(BUILD_DIR)/vos.bin iso/boot/vos.bin
