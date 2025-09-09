@@ -10,19 +10,17 @@ typedef struct {
     uint8_t  access;
     uint8_t  limit_and_flags;
     uint8_t  base_high;
-} __attribute__((packed)) GdtEntry;
+} __attribute__((packed)) GDTDescriptor;
 
-typedef struct GdtPtr{
+typedef struct {
     uint16_t limit;
     uint32_t base;
-} __attribute__((packed)) GdtPtr;
+} __attribute__((packed)) GDTR;
 
-void initGdt();
+GDTDescriptor createGDTDescriptor(uint32_t base, uint32_t limit, uint8_t access, uint8_t flags);
 
-void setGdtGate(uint32_t index, uint32_t base, uint32_t limit, uint8_t access, uint8_t flags);
+void setGDTDescriptor(GDTDescriptor *descriptor,  uint32_t base, uint32_t limit, uint8_t access, uint8_t flags);
 
-extern void gdt_flush(uint32_t);
-
-extern void tss_flush();
+extern void loadGDT(uint32_t);
 
 #endif

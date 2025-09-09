@@ -31,8 +31,15 @@ typedef struct {
     uint32_t ldt;
     uint32_t trap;
     uint32_t iomap_base;
-} __attribute__((packed)) TssEntry;
+} __attribute__((packed)) TSS;
 
-void writeTss(int32_t index, uint16_t ss0, uint32_t esp0);
+typedef struct {
+    uint16_t limit;
+    uint32_t base;
+} __attribute__((packed)) TR;
+
+void setTSS(TSS *tss, uint16_t ss0, uint32_t esp0);
+
+extern void loadTSS();
 
 #endif

@@ -1,8 +1,8 @@
-global idt_flush
+global loadIDT
 
-global isr_handler
+global handleISR
 
-extern irq_handler
+extern handleIRQ
 
 %macro ISR_NOERRCODE 1
     global isr%1
@@ -10,7 +10,7 @@ extern irq_handler
         CLI
         PUSH LONG 0
         PUSH LONG %1
-        JMP isr_stub
+        JMP dispatchISR
 %endmacro
 
 %macro ISR_ERRCODE 1
@@ -18,7 +18,7 @@ extern irq_handler
     isr%1:
         CLI
         PUSH LONG %1
-        JMP isr_stub
+        JMP dispatchISR
 %endmacro
 
 %macro IRQ 2
@@ -27,7 +27,7 @@ extern irq_handler
         CLI
         PUSH LONG 0
         PUSH LONG %2
-        JMP irq_stub
+        JMP dispatchIRQ
 %endmacro
 
 
@@ -85,13 +85,13 @@ IRQ 14, 46
 IRQ 15, 47
 
 
-idt_flush:
+loadIDT:
     mov eax, [esp+4]
     lidt [eax]
     sti
     ret
 
-isr_handler:
+handleISR:
     push ebp
     mov ebp, esp
     push ebx
@@ -113,7 +113,7 @@ isr_handler:
         ret
 
 
-isr_stub:
+dispatchISR:
     pusha
     mov eax, ds
     push eax
@@ -127,7 +127,7 @@ isr_stub:
     mov gs, ax
 
     push esp
-    call isr_handler
+    call handleISR 
 
     add esp, 8
     pop ebx
@@ -141,7 +141,7 @@ isr_stub:
     sti 
     iret
 
-irq_stub:
+dispatchIRQ:
     pusha
     mov eax, ds
     push eax
@@ -155,7 +155,7 @@ irq_stub:
     mov gs, ax
 
     push esp
-    call irq_handler
+    call handleIRQ
 
     add esp, 8
     pop ebx

@@ -9,12 +9,12 @@ typedef struct {
     uint8_t zero;
     uint8_t  type_attributes; // p, dpl, 0, gate type, 
     uint16_t offset_high;        
-} __attribute__((packed)) IdtEntry;
+} __attribute__((packed)) IDTDescriptor;
 
 typedef struct {
     uint16_t limit;
     uint32_t base;
-} __attribute__((packed)) IdtPtr;
+} __attribute__((packed)) IDTR;
 
 typedef struct {
     uint32_t cr2;
@@ -36,19 +36,17 @@ typedef struct {
     uint32_t ss;
 } InterruptRegisters;
 
-void initIdt();
+IDTDescriptor createIDTDescriptor(uint32_t base, uint16_t sel, uint8_t flags);
 
-void setIdtGate(int n, uint32_t base, uint16_t sel, uint8_t flags);
+extern void loadIDT(uint32_t);
 
-extern void idt_flush(uint32_t);
+extern void handleISR(InterruptRegisters *regs);
 
-extern void isr_handler(InterruptRegisters *regs);
+void handleIRQ(void **irq_routines, InterruptRegisters *regs);
 
-void irq_handler(InterruptRegisters *regs);
+void installIRQ(void **irq_routines, int index, void (*handler)(InterruptRegisters*));
 
-void irq_install(int index, void (*handler)(InterruptRegisters*));
-
-void irq_uninstall(int index);
+void uninstallIRQ(void **irq_routines, int index);
 
 extern void isr0();
 extern void isr1();

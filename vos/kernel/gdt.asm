@@ -1,6 +1,6 @@
-global gdt_flush
+global loadGDT
 
-gdt_flush:
+loadGDT:
     mov eax, [esp+4]
     lgdt [eax]
 

@@ -1,6 +1,6 @@
-global tss_flush
+global loadTSS
 
-tss_flush:
+loadTSS:
     mov ax, 0x2B
     ltr ax
     ret
