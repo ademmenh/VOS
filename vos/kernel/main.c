@@ -33,7 +33,9 @@ void main () {
     const int idt_length = 256;
     IDTDescriptor idt [idt_length];
     IDTR idtr;
-    void *irq_routines[16] = {
+    idtr.limit = sizeof(idt) - 1;
+    idtr.base = (uint32_t)&idt;
+    IRQHandler irq_routines[16] = {
         0, 
         0, 
         0, 
@@ -51,16 +53,22 @@ void main () {
         0, 
         0, 
     };
-    idtr.limit = sizeof(idt) - 1;
-    idtr.base = (uint32_t)&idt;
     memset(&idt, 0, sizeof(idt));
+    // ICW1 - master
     outb(0x20, 0x11);
+    // ICW1 - slave
     outb(0xA0, 0x11);
+    // ICW2 - master
     outb(0x21, 0x20);
+    // ICW2 - slave
     outb(0xA1, 0x28);
+    // ICW3 - master
     outb(0x21, 0x04);
+    // ICW3 - slave
     outb(0xA1, 0x02);
+    // ICW4 - master
     outb(0x21, 0x01);
+    // ICW4 - slave
     outb(0xA1, 0x01);
     outb(0x21, 0x00);
     outb(0xA1, 0x00);

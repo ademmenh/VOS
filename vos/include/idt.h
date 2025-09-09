@@ -36,17 +36,21 @@ typedef struct {
     uint32_t ss;
 } InterruptRegisters;
 
+// pointer to a func: which returns void and takes a pointer to InterruptRegisters
+// void handler(InterruptRegisters* regs);
+typedef void (*IRQHandler)(InterruptRegisters*);
+
 IDTDescriptor createIDTDescriptor(uint32_t base, uint16_t sel, uint8_t flags);
 
 extern void loadIDT(uint32_t);
 
 extern void handleISR(InterruptRegisters *regs);
 
-void handleIRQ(void **irq_routines, InterruptRegisters *regs);
+void handleIRQ(IRQHandler *irq_routines, InterruptRegisters *regs);
 
-void installIRQ(void **irq_routines, int index, void (*handler)(InterruptRegisters*));
+void installIRQ(IRQHandler *irq_routine, IRQHandler handler);
 
-void uninstallIRQ(void **irq_routines, int index);
+void uninstallIRQ(IRQHandler *irq_routine);
 
 extern void isr0();
 extern void isr1();

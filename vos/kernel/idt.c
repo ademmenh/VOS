@@ -13,20 +13,21 @@ IDTDescriptor createIDTDescriptor(uint32_t base, uint16_t selector, uint8_t flag
     return descriptor;
 }
 
-void handleIRQ(void **irq_routines, InterruptRegisters *regs){
-    void (*handler)(InterruptRegisters *regs);
-    handler = irq_routines[regs->int_no - 32];
+void handleIRQ(IRQHandler *irq_routines, InterruptRegisters *regs){
+    IRQHandler handler;
+    handler = irq_routines[regs->int_no - 0x20];
     if (handler) handler(regs);
     if (regs->int_no >= 40) outb(0xA0, 0x20);
+    // EOI - master
     outb(0x20, 0x20);
 }
 
-void installIRQ(void **irq_routines, int index, void (*handler)(InterruptRegisters*)){
-    irq_routines[index] = handler;
+void installIRQ(IRQHandler *irq_routine, IRQHandler handler){
+    *irq_routine = handler;
 }
 
-void uninstallIRQ(void **irq_routines, int index){
-    irq_routines[index] = 0;
+void uninstallIRQ(IRQHandler *irq_routine){
+    *irq_routine = 0;
 }
 
 unsigned char *exception_messages[] = {
