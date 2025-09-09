@@ -15,7 +15,6 @@ section .text
         hlt
 
     halt:
-        cli
         hlt
         jmp halt
 

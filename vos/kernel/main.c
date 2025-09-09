@@ -1,8 +1,32 @@
+#include <stdint.h>
 #include "gdt.h"
 #include "idt.h"
 #include "tss.h"
 #include "utils/io.h"
 #include "utils/memset.h"
+#include "utils/vga.h"
+#include "routines/timer.h"
+
+IRQHandler irq_routines[16] = {
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+};
+
+uint64_t tick = 0;
 
 void main () {
     // init GDT
@@ -35,24 +59,6 @@ void main () {
     IDTR idtr;
     idtr.limit = sizeof(idt) - 1;
     idtr.base = (uint32_t)&idt;
-    IRQHandler irq_routines[16] = {
-        0, 
-        0, 
-        0, 
-        0, 
-        0, 
-        0, 
-        0, 
-        0, 
-        0, 
-        0, 
-        0, 
-        0, 
-        0, 
-        0, 
-        0, 
-        0, 
-    };
     memset(&idt, 0, sizeof(idt));
     // ICW1 - master
     outb(0x20, 0x11);
@@ -123,4 +129,11 @@ void main () {
     idt[128] = createIDTDescriptor((uint32_t)isr128, 0x08, 0x8E);
     idt[177] = createIDTDescriptor((uint32_t)isr177, 0x08, 0x8E);
     loadIDT((uint32_t)&idtr);
+
+    installIRQ(&irq_routines[0], irq0Handler);
+    const uint32_t hz = 100;
+    uint32_t divisor = 1193180 / hz;
+    outb(0x43, 0x36);
+    outb(0x40,(uint8_t)(divisor & 0xFF));
+    outb(0x40,(uint8_t)((divisor >> 8) & 0xFF));
 }

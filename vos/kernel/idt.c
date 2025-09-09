@@ -13,7 +13,7 @@ IDTDescriptor createIDTDescriptor(uint32_t base, uint16_t selector, uint8_t flag
     return descriptor;
 }
 
-void handleIRQ(IRQHandler *irq_routines, InterruptRegisters *regs){
+void handleIRQ(InterruptRegisters *regs){
     IRQHandler handler;
     handler = irq_routines[regs->int_no - 0x20];
     if (handler) handler(regs);
