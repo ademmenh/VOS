@@ -6,6 +6,7 @@
 #include "utils/memset.h"
 #include "utils/vga.h"
 #include "routines/timer.h"
+#include "routines/keyboard.h"
 
 IRQHandler irq_routines[16] = {
     0, 
@@ -130,10 +131,12 @@ void main () {
     idt[177] = createIDTDescriptor((uint32_t)isr177, 0x08, 0x8E);
     loadIDT((uint32_t)&idtr);
 
-    installIRQ(&irq_routines[0], irq0Handler);
+    installIRQ(&irq_routines[0], handleTimer);
     const uint32_t hz = 100;
     uint32_t divisor = 1193180 / hz;
     outb(0x43, 0x36);
     outb(0x40,(uint8_t)(divisor & 0xFF));
     outb(0x40,(uint8_t)((divisor >> 8) & 0xFF));
+
+    installIRQ(&irq_routines[1], handleKeyboard);
 }
