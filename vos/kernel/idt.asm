@@ -107,7 +107,7 @@ handleISR:
         hlt
         jmp .halt_loop
 
-    .end
+    .end:
         pop ebx
         pop ebp
         ret
