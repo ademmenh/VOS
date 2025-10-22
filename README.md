@@ -1,4 +1,7 @@
 # VOS Build & Development Guide
+
+![Boot Process](docs/vos.png)
+
 ## Project Structure Overview
 
 ```
