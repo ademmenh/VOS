@@ -46,6 +46,7 @@ asm_bins:
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/tss.asm -o $(BUILD_DIR)/objects/tss.s.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/utils/io.asm -o $(BUILD_DIR)/objects/io.s.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/idt.asm -o $(BUILD_DIR)/objects/idt.s.o
+	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/task.asm -o $(BUILD_DIR)/objects/task.s.o
 
 link:
 	$(LINKER) $(LINKER_FLAGS) -T $(SRC_DIR)/linker.ld build/objects/*.o -o $(BUILD_DIR)/vos.bin

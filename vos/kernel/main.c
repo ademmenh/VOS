@@ -7,6 +7,21 @@
 #include "utils/vga.h"
 #include "routines/timer.h"
 #include "routines/keyboard.h"
+#include "task.h"
+
+void task1(void) {
+    while (1) {
+        print("aaaaaa");
+        yield();
+    }
+}
+
+void task2(void) {
+    while (1) {
+        print("bbbbb");
+        yield();
+    }
+}
 
 IRQHandler irq_routines[16] = {
     0, 
@@ -139,4 +154,8 @@ void main () {
     outb(0x40,(uint8_t)((divisor >> 8) & 0xFF));
 
     installIRQ(&irq_routines[1], handleKeyboard);
+
+    initScheduling(&tss);
+    createTask(task1);
+    // createTask(task2);
 }
