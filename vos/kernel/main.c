@@ -11,14 +11,21 @@
 
 void task1(void) {
     while (1) {
-        print("aaaaaa");
+        print("a");
         yield();
     }
 }
 
 void task2(void) {
     while (1) {
-        print("bbbbb");
+        print("b");
+        yield();
+    }
+}
+
+void task3(void) {
+    while (1) {
+        print("c");
         yield();
     }
 }
@@ -146,16 +153,16 @@ void main () {
     idt[177] = createIDTDescriptor((uint32_t)isr177, 0x08, 0x8E);
     loadIDT((uint32_t)&idtr);
 
-    installIRQ(&irq_routines[0], handleTimer);
-    const uint32_t hz = 100;
+    const uint32_t hz = 1;
     uint32_t divisor = 1193180 / hz;
     outb(0x43, 0x36);
     outb(0x40,(uint8_t)(divisor & 0xFF));
     outb(0x40,(uint8_t)((divisor >> 8) & 0xFF));
 
+    installIRQ(&irq_routines[0], handleTimer);
     installIRQ(&irq_routines[1], handleKeyboard);
-
     initScheduling(&tss);
     createTask(task1);
-    // createTask(task2);
+    createTask(task2);
+    createTask(task3);
 }

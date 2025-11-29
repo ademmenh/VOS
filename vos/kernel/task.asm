@@ -2,6 +2,13 @@ section .text
 
 global contextSwitch
 global getCurrentesp
+global taskTrampoline
+
+taskTrampoline:
+    sti
+    call edi
+    jmp $
+
 
 contextSwitch:
     push ebp
