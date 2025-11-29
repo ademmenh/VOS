@@ -8,6 +8,9 @@
 #include "utils/io.h"
 #include "utils/vga.h"
 
+
+Keyboard *keyboard;
+
 const char scanCodesLower[] = {
     0,  0,  '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 0,  0,
     'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', 0,  0,
@@ -22,9 +25,14 @@ const char scanCodesUpper[] = {
     'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?', 0,  0,  0,  ' '
 };
 
+void initKeyboard(Keyboard *k) {
+    keyboard = k;
+    k->shiftPressed = 0;
+}
+
 char scanCodeToAscii(unsigned char scanCode) {
     if (scanCode < sizeof(scanCodesLower)) {
-        if (shiftPressed) {
+        if (keyboard->shiftPressed) {
             return scanCodesUpper[scanCode];
         } else {
             return scanCodesLower[scanCode];
@@ -40,19 +48,14 @@ void handleKeyboard(InterruptRegisters *regs){
 
     // Handle shift keys
     if (c == 0x2A || c == 0x36) {
-        if (press) {
-            shiftPressed = 0;
-        } else {
-            shiftPressed = 1;
-        }
+        if (press) keyboard->shiftPressed = 0;
+        else keyboard->shiftPressed = 1;
         return;
     }
 
     if (!press) {
         char asciiChar = scanCodeToAscii(c);
-        if (asciiChar) {
-            putc(asciiChar);
-        }
+        if (asciiChar) putc(asciiChar);
     }
     outb(0x20, 0x20);
 }

@@ -1,9 +1,14 @@
 #ifndef KEYBIARD_H
-#define KEYBIARD_H
+#define KEYBIARD_H 
 
+#include <stdint.h>
 #include "idt.h"
 
-static unsigned char shiftPressed = 0;
+typedef struct {
+    uint64_t shiftPressed;
+} Keyboard;
+
+void initKeyboard(Keyboard *k);
 
 void handleKeyboard(InterruptRegisters *regs);
 

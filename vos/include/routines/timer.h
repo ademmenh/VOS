@@ -1,9 +1,14 @@
 #ifndef TIMER_H
 #define TIMER_H
 
+#include <stdint.h>
 #include "idt.h"
 
-extern uint64_t tick;
+typedef struct {
+    uint64_t tick;
+} Timer;
+
+void initTimer(Timer *t, int hz);
 
 void handleTimer(InterruptRegisters *regs);
 

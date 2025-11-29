@@ -40,8 +40,6 @@ IRQHandler irq_routines[16] = {
     0, 
 };
 
-uint64_t tick = 0;
-
 void main () {
     // init GDT
     const int gdt_length = 6;
@@ -144,14 +142,14 @@ void main () {
     idt[177] = createIDTDescriptor((uint32_t)isr177, 0x08, 0x8E);
     loadIDT((uint32_t)&idtr);
 
-    const uint32_t hz = 100;
-    uint32_t divisor = 1193180 / hz;
-    outb(0x43, 0x36);
-    outb(0x40,(uint8_t)(divisor & 0xFF));
-    outb(0x40,(uint8_t)((divisor >> 8) & 0xFF));
-
+    Timer timer;
+    initTimer(&timer, 1);
     installIRQ(&irq_routines[0], handleTimer);
+
+    Keyboard keyboard;
+    initKeyboard(&keyboard);
     installIRQ(&irq_routines[1], handleKeyboard);
+
     initScheduling();
     createTask(task1);
     createTask(task2);

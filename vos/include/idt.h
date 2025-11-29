@@ -36,8 +36,6 @@ typedef struct {
     uint32_t ss;
 } InterruptRegisters;
 
-// pointer to a func: which returns void and takes a pointer to InterruptRegisters
-// void handler(InterruptRegisters* regs);
 typedef void (*IRQHandler)(InterruptRegisters *regs);
 
 extern IRQHandler irq_routines[16];
