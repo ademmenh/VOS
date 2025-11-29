@@ -10,24 +10,15 @@
 #include "task.h"
 
 void task1(void) {
-    while (1) {
-        print("a");
-        yield();
-    }
+    while (1) print("a");
 }
 
 void task2(void) {
-    while (1) {
-        print("b");
-        yield();
-    }
+    while (1) print("b");
 }
 
 void task3(void) {
-    while (1) {
-        print("c");
-        yield();
-    }
+    while (1) print("c");
 }
 
 IRQHandler irq_routines[16] = {
@@ -153,7 +144,7 @@ void main () {
     idt[177] = createIDTDescriptor((uint32_t)isr177, 0x08, 0x8E);
     loadIDT((uint32_t)&idtr);
 
-    const uint32_t hz = 1;
+    const uint32_t hz = 100;
     uint32_t divisor = 1193180 / hz;
     outb(0x43, 0x36);
     outb(0x40,(uint8_t)(divisor & 0xFF));
@@ -161,7 +152,7 @@ void main () {
 
     installIRQ(&irq_routines[0], handleTimer);
     installIRQ(&irq_routines[1], handleKeyboard);
-    initScheduling(&tss);
+    initScheduling();
     createTask(task1);
     createTask(task2);
     createTask(task3);

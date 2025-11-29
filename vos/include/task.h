@@ -1,7 +1,6 @@
 #ifndef TASK_H
 #define TASK_H
 
-#include "tss.h"
 #include <stdint.h>
 
 #define KSTACK_BASE 0xA00000  // 10MB
@@ -38,7 +37,7 @@ static uint32_t next_stack = 0;
 
 int createTask(void (*entry)(void));
 
-void initScheduling(TSS *tss);
+void initScheduling();
 
 void schedule(void);
 

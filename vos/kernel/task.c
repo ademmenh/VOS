@@ -12,8 +12,6 @@ static int current_idx = 0;
 
 extern void taskTrampoline(void);
 
-TSS tss;
-
 int createTask(void (*func)(void)) {
     if (task_count >= MAX_TASKS) return -1;
     Task *t = &tasks[task_count];
@@ -33,7 +31,7 @@ int createTask(void (*func)(void)) {
     return t->id;
 }
 
-void initScheduling(TSS *t) {
+void initScheduling() {
     Task *task = tasks;
     memset(task, 0, sizeof(*task));
     task->id = 0;
@@ -42,7 +40,6 @@ void initScheduling(TSS *t) {
     current_task = task;
     task_count = 1;
     current_idx = 0;
-    tss = *t;
 }
 
 void schedule() {
@@ -58,8 +55,6 @@ void schedule() {
             current_idx = (next + i) % task_count;
             prev->state = TASK_RUNNABLE;
             n->state = TASK_RUNNING;
-            tss.esp0 = (uint32_t)n->kstack_top;
-            tss.ss0 = 0x10;  // kernel data selector
             uint32_t **prev_esp_ptr = &prev->kstack_top;
             uint32_t *next_esp = n->kstack_top;
             contextSwitch(prev_esp_ptr, next_esp);
