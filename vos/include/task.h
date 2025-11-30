@@ -3,17 +3,16 @@
 
 #include <stdint.h>
 
-#define KSTACK_BASE 0xA00000  // 10MB
+#define KSTACK_BASE 0xFFFFFFFF
 
-#define MAX_TASKS 256
-
-#define KSTACK_SIZE 16384    // 16 KB
+#define KSTACK_SIZE 16384
 
 typedef enum { 
     TASK_RUNNABLE=0,
     TASK_RUNNING=1,
     TASK_WAITING=2,
-    TASK_ZOMBIE=3 
+    TASK_ZOMBIE=3,
+    TASK_TERMINATED=4
 } TaskState;
 
 typedef struct {
@@ -33,19 +32,7 @@ typedef struct {
     Regs regs;
 } Task;
 
-static uint32_t next_stack = 0;
-
-int createTask(void (*entry)(void));
-
-void initScheduling();
-
-void schedule(void);
-
-void yield(void);
-
-extern void contextSwitch(uint32_t **prev_esp, uint32_t *next_esp);
-
-extern uint32_t getCurrentesp(void);
+struct Scheduler;
 
 void *allocateKStack(void);
 

@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "idt.h"
+#include "schedulers/scheduler.h"
 
 typedef struct {
     uint64_t tick;

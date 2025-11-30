@@ -8,19 +8,33 @@
 #include "routines/timer.h"
 #include "routines/keyboard.h"
 #include "task.h"
+#include "schedulers/rr.h"
+#include "schedulers/scheduler.h"
 
-void task1(void) {
-    while (1) print("a");
-}
 
-void task2(void) {
-    while (1) print("b");
-}
+#define GDT_LENGTH 6
+#define IDT_LENGTH 256
+#define MAX_TASKS 256
 
-void task3(void) {
-    while (1) print("c");
-}
+GDTR gdtr;
+GDTDescriptor gdt[GDT_LENGTH];
+TSS tss;
+TR tr;
+IDTR idtr;
+IDTDescriptor idt[IDT_LENGTH];
 
+Task tasks[MAX_TASKS];
+Scheduler sys_scheduler;
+SchedulerStrategy rr = {
+    .init = initRR,
+    .schedule = scheduleRR,
+    .yield = yieldRR,
+    .addTask = addTaskRR,
+    .removeTask = removeTaskRR
+};
+
+Timer sys_timer;
+Keyboard sys_keyboard;
 IRQHandler irq_routines[16] = {
     0, 
     0, 
@@ -40,11 +54,23 @@ IRQHandler irq_routines[16] = {
     0, 
 };
 
+void task1(void) {
+    char c = 'a';
+    while (1) print(&c);
+}
+
+void task2(void) {
+    char c = 'b';
+    while (1) print(&c);
+}
+
+void task3(void) {
+    char c = 'c';
+    while (1) print(&c);
+}
+
 void main () {
     // init GDT
-    const int gdt_length = 6;
-    GDTDescriptor gdt [gdt_length];
-    GDTR gdtr;
     gdtr.limit = sizeof(gdt) - 1;
     gdtr.base = (uint32_t)&gdt;
     gdt[0] = createGDTDescriptor(0, 0, 0, 0);                  // Null Segment
@@ -54,8 +80,6 @@ void main () {
     gdt[4] = createGDTDescriptor(0, 0xFFFFFFFF, 0xF2, 0xCF);   // User Data Segment
 
     // init TSS
-    TSS tss;
-    TR tr;
     tr.base = (uint32_t) &tss;
     // tr.limit = tr.base + sizeof(tss);
     tr.limit = sizeof(tss) - 1;
@@ -66,9 +90,6 @@ void main () {
     loadTSS();
 
     // init IDT
-    const int idt_length = 256;
-    IDTDescriptor idt [idt_length];
-    IDTR idtr;
     idtr.limit = sizeof(idt) - 1;
     idtr.base = (uint32_t)&idt;
     memset(&idt, 0, sizeof(idt));
@@ -142,16 +163,15 @@ void main () {
     idt[177] = createIDTDescriptor((uint32_t)isr177, 0x08, 0x8E);
     loadIDT((uint32_t)&idtr);
 
-    Timer timer;
-    initTimer(&timer, 1);
-    installIRQ(&irq_routines[0], handleTimer);
+    initScheduler(&sys_scheduler, &rr, tasks, MAX_TASKS);
 
-    Keyboard keyboard;
-    initKeyboard(&keyboard);
+    initTimer(&sys_timer, 100);
+    installIRQ(&irq_routines[0], handleTimer);
+    
+    initKeyboard(&sys_keyboard);
     installIRQ(&irq_routines[1], handleKeyboard);
 
-    initScheduling();
-    createTask(task1);
-    createTask(task2);
-    createTask(task3);
+    addTask(task1);
+    addTask(task2);
+    addTask(task3);
 }

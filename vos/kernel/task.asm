@@ -1,7 +1,6 @@
 section .text
 
 global contextSwitch
-global getCurrentesp
 global taskTrampoline
 
 taskTrampoline:
@@ -26,9 +25,4 @@ contextSwitch:
     pop esi
     pop ebx
     pop ebp
-    ret
-
-getCurrentesp:
-    mov eax, esp
-    add eax, 4
     ret
