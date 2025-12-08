@@ -27,6 +27,7 @@ typedef struct {
 typedef struct {
     int id;
     TaskState state;
+    int priority;
     uint8_t *kstack;       // kernel stack base pointer 
     uint32_t *kstack_top;  // kstack top (esp)
     Regs regs;
