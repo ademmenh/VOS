@@ -3,16 +3,16 @@
 
 #include "task.h"
 
-struct Scheduler;
+typedef struct Scheduler Scheduler;
 
-struct SchedulerStrategy;
+typedef struct SchedulerStrategy SchedulerStrategy;
 
 struct SchedulerStrategy {
-    void (*init)();
-    void (*schedule)();
-    void (*yield)();
-    int (*addTask)(void (*func)(void));
-    void (*removeTask)(int task_id);
+    void (*init)(Scheduler *scheduler);
+    void (*schedule)(Scheduler *scheduler);
+    void (*yield)(Scheduler *scheduler);
+    int (*addTask)(Scheduler *scheduler, void (*func)(void));
+    void (*removeTask)(Scheduler *scheduler, int task_id);
 };
 
 struct Scheduler {
@@ -29,12 +29,12 @@ typedef struct SchedulerStrategy SchedulerStrategy;
 
 void initScheduler(Scheduler *scheduler, SchedulerStrategy *strategy, Task *tasks, int max_tasks);
 
-void schedule();
+void schedule(Scheduler *scheduler);
 
-void yield();
+void yield(Scheduler *scheduler);
 
-int addTask(void (*func)(void));
+int addTask(Scheduler *scheduler, void (*func)(void));
 
-void removeTask(int task_id);
+void removeTask(Scheduler *scheduler, int task_id);
 
 #endif

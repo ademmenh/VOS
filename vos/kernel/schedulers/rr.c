@@ -8,9 +8,7 @@ extern uint32_t getCurrentesp();
 
 extern void taskTrampoline();
 
-extern Scheduler *scheduler;
-
-void initRR() {
+void initRR(Scheduler *scheduler) {
     Task *task = scheduler->tasks;
     task->id = 0;
     memset(task, 0, sizeof(*task));
@@ -18,7 +16,7 @@ void initRR() {
     task->kstack_top = (uint32_t*)getCurrentesp();
 }
 
-void scheduleRR() {
+void scheduleRR(Scheduler *scheduler) {
     int start_idx = (scheduler->current_idx + 1) % scheduler->task_count;
     for (int i = 0; i < scheduler->task_count; ++i) {
         int next_idx = (start_idx + i) % scheduler->task_count;
@@ -37,11 +35,11 @@ void scheduleRR() {
     }
 }
 
-void yieldRR() {
-    scheduleRR();
+void yieldRR(Scheduler *scheduler) {
+    scheduleRR(scheduler);
 }
 
-int addTaskRR(void (*func)(void)) {
+int addTaskRR(Scheduler *scheduler, void (*func)(void)) {
     if (scheduler->task_count >= scheduler->max_tasks) return -1;
     Task *t = &scheduler->tasks[scheduler->task_count];
     memset(t, 0, sizeof(Task));
@@ -60,6 +58,6 @@ int addTaskRR(void (*func)(void)) {
     return t->id;
 }
 
-void removeTaskRR(int task_id) {
+void removeTaskRR(Scheduler *scheduler, int task_id) {
     if (task_id >= 0 && task_id < scheduler->task_count) scheduler->tasks[task_id].state = TASK_TERMINATED;
 }

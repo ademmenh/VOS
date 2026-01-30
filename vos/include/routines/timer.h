@@ -9,7 +9,7 @@ typedef struct {
     uint64_t tick;
 } Timer;
 
-void initTimer(Timer *t, int hz);
+void initTimer(Timer *t, int hz, Scheduler *scheduler);
 
 void handleTimer(InterruptRegisters *regs);
 

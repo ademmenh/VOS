@@ -8,9 +8,7 @@ extern uint32_t getCurrentesp();
 
 extern void taskTrampoline();
 
-extern Scheduler *scheduler;
-
-void initPriority() {
+void initPriority(Scheduler *scheduler) {
     Task *task = scheduler->tasks;
     task->id = 0;
     memset(task, 0, sizeof(*task));
@@ -19,33 +17,38 @@ void initPriority() {
     task->kstack_top = (uint32_t*)getCurrentesp();
 }
 
-void schedulePriority() {
-    int best_idx = -1;
+void schedulePriority(Scheduler *scheduler) {
     int max_prio = -1;
-
-    // Check current task first
-    if (scheduler->tasks[scheduler->current_idx].state == TASK_RUNNING) {
-         best_idx = scheduler->current_idx;
-         max_prio = scheduler->tasks[scheduler->current_idx].priority;
-    }
-
     for (int i = 0; i < scheduler->task_count; ++i) {
-        if (i == scheduler->current_idx) continue;
-        
         Task *t = &scheduler->tasks[i];
-        if (t->state == TASK_RUNNABLE) {
+        if (t->state == TASK_RUNNABLE || t->state == TASK_RUNNING) {
             if (t->priority > max_prio) {
                 max_prio = t->priority;
-                best_idx = i;
             }
         }
     }
-    
+
+    if (max_prio == -1) return;
+    int start_idx = (scheduler->current_idx + 1) % scheduler->task_count;
+    int best_idx = -1;
+
+    for (int i = 0; i < scheduler->task_count; ++i) {
+        int idx = (start_idx + i) % scheduler->task_count;
+        Task *t = &scheduler->tasks[idx];
+        
+        if ((t->state == TASK_RUNNABLE || t->state == TASK_RUNNING) && t->priority == max_prio) {
+            best_idx = idx;
+            break;
+        }
+    }
+
     if (best_idx != -1 && best_idx != scheduler->current_idx) {
         Task *prev_task = &scheduler->tasks[scheduler->current_idx];
         Task *next_task = &scheduler->tasks[best_idx];
         
-        prev_task->state = TASK_RUNNABLE;
+        if (prev_task->state == TASK_RUNNING) {
+            prev_task->state = TASK_RUNNABLE;
+        }
         next_task->state = TASK_RUNNING;
         scheduler->current_idx = best_idx;
         
@@ -55,17 +58,17 @@ void schedulePriority() {
     }
 }
 
-void yieldPriority() {
-    schedulePriority();
+void yieldPriority(Scheduler *scheduler) {
+    schedulePriority(scheduler);
 }
 
-int addTaskPriority(void (*func)(void)) {
+int addTaskPriority(Scheduler *scheduler, void (*func)(void)) {
     if (scheduler->task_count >= scheduler->max_tasks) return -1;
     Task *t = &scheduler->tasks[scheduler->task_count];
     memset(t, 0, sizeof(Task));
     t->id = scheduler->task_count;
     t->state = TASK_RUNNABLE;
-    t->priority = 1; // Default priority
+    t->priority = 1;
     t->kstack = allocateKStack();
     if (!t->kstack) return -1;
     uint32_t *top = (uint32_t*)(t->kstack + KSTACK_SIZE);
@@ -79,11 +82,11 @@ int addTaskPriority(void (*func)(void)) {
     return t->id;
 }
 
-void removeTaskPriority(int task_id) {
+void removeTaskPriority(Scheduler *scheduler, int task_id) {
     if (task_id >= 0 && task_id < scheduler->task_count) scheduler->tasks[task_id].state = TASK_TERMINATED;
 }
 
-void setTaskPriority(int task_id, int priority) {
+void setTaskPriority(Scheduler *scheduler, int task_id, int priority) {
     if (task_id >= 0 && task_id < scheduler->task_count) {
         scheduler->tasks[task_id].priority = priority;
     }

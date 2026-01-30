@@ -1,32 +1,29 @@
 #include "schedulers/scheduler.h"
 
-Scheduler *scheduler;
-
 void initScheduler(Scheduler *sched, SchedulerStrategy *strategy, Task *tasks, int max_tasks) {
-    scheduler = sched;
     sched->strategy = strategy;
     sched->tasks = tasks;
     sched->max_tasks = max_tasks;
     sched->task_count = 1;
     sched->current_idx = 0;
     if (!strategy || !strategy->init) return;
-    sched->strategy->init();
+    strategy->init(sched);
 }
 
-void schedule() {
+void schedule(Scheduler *scheduler) {
     if (scheduler->task_count <= 1) return;
-    if (scheduler->strategy && scheduler->strategy->schedule) scheduler->strategy->schedule();
+    if (scheduler->strategy && scheduler->strategy->schedule) scheduler->strategy->schedule(scheduler);
 }
 
-void yield() {
-    if (scheduler->strategy && scheduler->strategy->yield) scheduler->strategy->yield();
+void yield(Scheduler *scheduler) {
+    if (scheduler->strategy && scheduler->strategy->yield) scheduler->strategy->yield(scheduler);
 }
 
-int addTask(void (*func)(void)) {
-    if (scheduler->strategy && scheduler->strategy->addTask) return scheduler->strategy->addTask(func);
+int addTask(Scheduler *scheduler, void (*func)(void)) {
+    if (scheduler->strategy && scheduler->strategy->addTask) return scheduler->strategy->addTask(scheduler, func);
     return -1;
 }
 
-void removeTask(int task_id) {
-    if (scheduler->strategy && scheduler->strategy->removeTask) scheduler->strategy->removeTask(task_id);
+void removeTask(Scheduler *scheduler, int task_id) {
+    if (scheduler->strategy && scheduler->strategy->removeTask) scheduler->strategy->removeTask(scheduler, task_id);
 }

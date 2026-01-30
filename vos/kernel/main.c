@@ -8,9 +8,9 @@
 #include "routines/timer.h"
 #include "routines/keyboard.h"
 #include "task.h"
-#include "schedulers/priority.h"
+// #include "schedulers/priority.h"
+#include "schedulers/rr.h"
 #include "schedulers/scheduler.h"
-
 
 #define GDT_LENGTH 6
 #define IDT_LENGTH 256
@@ -24,13 +24,13 @@ IDTR idtr;
 IDTDescriptor idt[IDT_LENGTH];
 
 Task tasks[MAX_TASKS];
-Scheduler sys_scheduler;
-SchedulerStrategy priority_strategy = {
-    .init = initPriority,
-    .schedule = schedulePriority,
-    .yield = yieldPriority,
-    .addTask = addTaskPriority,
-    .removeTask = removeTaskPriority
+Scheduler scheduler;
+SchedulerStrategy rr_strategy = {
+    .init = initRR,
+    .schedule = scheduleRR,
+    .yield = yieldRR,
+    .addTask = addTaskRR,
+    .removeTask = removeTaskRR 
 };
 
 Timer sys_timer;
@@ -163,19 +163,12 @@ void main () {
     idt[177] = createIDTDescriptor((uint32_t)isr177, 0x08, 0x8E);
     loadIDT((uint32_t)&idtr);
 
-    initScheduler(&sys_scheduler, &priority_strategy, tasks, MAX_TASKS);
-
-    initTimer(&sys_timer, 100);
+    initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS);
+    initTimer(&sys_timer, 100, &scheduler);
     installIRQ(&irq_routines[0], handleTimer);
-    
     initKeyboard(&sys_keyboard);
     installIRQ(&irq_routines[1], handleKeyboard);
-
-    int t1 = addTask(task1);
-    int t2 = addTask(task2);
-    int t3 = addTask(task3);
-
-    setTaskPriority(t1, 1);
-    setTaskPriority(t2, 1);
-    setTaskPriority(t3, 1);
+    int t1 = addTask(&scheduler, task1);
+    int t2 = addTask(&scheduler, task2);
+    int t3 = addTask(&scheduler, task3);
 }

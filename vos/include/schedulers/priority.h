@@ -3,16 +3,16 @@
 
 #include "scheduler.h"
 
-void initPriority();
+void initPriority(Scheduler *scheduler);
 
-void schedulePriority();
+void schedulePriority(Scheduler *scheduler);
 
-void yieldPriority();
+void yieldPriority(Scheduler *scheduler);
     
-int addTaskPriority(void (*func)(void));
+int addTaskPriority(Scheduler *scheduler, void (*func)(void));
 
-void removeTaskPriority(int task_id);
+void removeTaskPriority(Scheduler *scheduler, int task_id);
 
-void setTaskPriority(int task_id, int priority);
+void setTaskPriority(Scheduler *scheduler, int task_id, int priority);
 
 #endif

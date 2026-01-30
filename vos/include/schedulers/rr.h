@@ -3,14 +3,14 @@
 
 #include "scheduler.h"
 
-void initRR();
+void initRR(Scheduler *scheduler);
 
-void scheduleRR();
+void scheduleRR(Scheduler *scheduler);
 
-void yieldRR();
+void yieldRR(Scheduler *scheduler);
     
-int addTaskRR(void (*func)(void));
+int addTaskRR(Scheduler *scheduler, void (*func)(void));
 
-void removeTaskRR(int task_id);
+void removeTaskRR(Scheduler *scheduler, int task_id);
 
 #endif
