@@ -8,6 +8,7 @@ const uint16_t defaultColor = (COLOR8_LIGHT_GREY << 8) | (COLOR8_BLACK << 12);
 uint16_t currentColor = defaultColor;
 
 void Reset(){
+    asm volatile("cli");
     line = 0;
     column = 0;
     currentColor = defaultColor;
@@ -17,9 +18,11 @@ void Reset(){
             vga[y * width + x] = ' ' | defaultColor;
         }
     }
+    asm volatile("sti");
 }
 
 void newLine(){
+    asm volatile("cli");
     if (line < height - 1){
         line++;
         column = 0;
@@ -27,21 +30,24 @@ void newLine(){
         scrollUp();
         column = 0;
     }
+    asm volatile("sti");
 }
 
 void scrollUp(){
+    asm volatile("cli");
     for (uint16_t y = 0; y < height; y++){
         for (uint16_t x = 0; x < width; x++){
             vga[(y-1) * width + x] = vga[y*width+x];
         }
     }
-
+    asm volatile("sti");
     for (uint16_t x = 0; x < width; x++){
         vga[(height-1) * width + x] = ' ' | currentColor;
     }
 }
 
 void print(const char* s){
+    asm volatile("cli");
     while(*s){
         switch(*s){
             case '\n':
@@ -70,9 +76,11 @@ void print(const char* s){
         }
         s++;
     }
+    asm volatile("sti");
 }
 
 void putc(char c) {
+    asm volatile("cli");
     switch(c) {
         case '\n':
             newLine();
@@ -97,4 +105,5 @@ void putc(char c) {
             vga[line * width + (column++)] = c | currentColor;
             break;
     }
+    asm volatile("sti");
 }
