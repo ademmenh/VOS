@@ -45,7 +45,7 @@ int addTaskRR(Scheduler *scheduler, void (*func)(void)) {
     memset(t, 0, sizeof(Task));
     t->id = scheduler->task_count;
     t->state = TASK_RUNNABLE;
-    t->kstack = allocateKStack();
+    t->kstack = allocateKStack(scheduler);
     if (!t->kstack) return -1;
     uint32_t *top = (uint32_t*)(t->kstack + KSTACK_SIZE);
     *(--top) = (uint32_t)taskTrampoline;

@@ -1,4 +1,5 @@
 #include "schedulers/scheduler.h"
+#include "task.h"
 
 void initScheduler(Scheduler *sched, SchedulerStrategy *strategy, Task *tasks, int max_tasks) {
     sched->strategy = strategy;

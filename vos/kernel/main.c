@@ -8,6 +8,7 @@
 #include "routines/timer.h"
 #include "routines/keyboard.h"
 #include "task.h"
+#include "memory/paging.h"
 // #include "schedulers/priority.h"
 #include "schedulers/rr.h"
 #include "schedulers/scheduler.h"
@@ -32,6 +33,7 @@ SchedulerStrategy rr_strategy = {
     .addTask = addTaskRR,
     .removeTask = removeTaskRR 
 };
+PageTable pagingTable;
 
 Timer sys_timer;
 Keyboard sys_keyboard;
@@ -162,13 +164,17 @@ void main () {
     idt[128] = createIDTDescriptor((uint32_t)isr128, 0x08, 0x8E);
     idt[177] = createIDTDescriptor((uint32_t)isr177, 0x08, 0x8E);
     loadIDT((uint32_t)&idtr);
+    initPaging(&pagingTable);
 
     initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS);
     initTimer(&sys_timer, 100, &scheduler);
     installIRQ(&irq_routines[0], handleTimer);
     initKeyboard(&sys_keyboard);
     installIRQ(&irq_routines[1], handleKeyboard);
+    Reset();
     int t1 = addTask(&scheduler, task1);
     int t2 = addTask(&scheduler, task2);
     int t3 = addTask(&scheduler, task3);
+
+    while(1);
 }

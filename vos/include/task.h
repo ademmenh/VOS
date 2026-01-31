@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+typedef struct Scheduler Scheduler;
+
 #define KSTACK_BASE 0xFFFFFFFF
 
 #define KSTACK_SIZE 16384
@@ -33,8 +35,6 @@ typedef struct {
     Regs regs;
 } Task;
 
-struct Scheduler;
-
-void *allocateKStack(void);
+void *allocateKStack(Scheduler *scheduler);
 
 #endif

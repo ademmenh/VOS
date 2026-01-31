@@ -2,6 +2,10 @@ global loadIDT
 
 global handleISR
 
+global page_fault_interrupt
+
+global loadPaging
+
 extern handleIRQ
 
 %macro ISR_NOERRCODE 1
@@ -167,3 +171,15 @@ dispatchIRQ:
     add esp, 8
     sti 
     iret
+
+loadPaging:
+    push ebp
+    mov ebp, esp
+    mov eax, [ebp + 8] 
+    mov cr3, eax       
+    mov eax, cr0
+    or eax, 0x80000001
+    mov cr0, eax
+    pop ebp
+    ret
+

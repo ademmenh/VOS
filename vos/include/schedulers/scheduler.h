@@ -23,10 +23,6 @@ struct Scheduler {
     int current_idx;
 };
 
-typedef struct Scheduler Scheduler;
-
-typedef struct SchedulerStrategy SchedulerStrategy;
-
 void initScheduler(Scheduler *scheduler, SchedulerStrategy *strategy, Task *tasks, int max_tasks);
 
 void schedule(Scheduler *scheduler);
