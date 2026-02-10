@@ -48,7 +48,7 @@ asm_bins:
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/idt.asm -o $(BUILD_DIR)/objects/idt.s.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/schedulers/scheduler.asm -o $(BUILD_DIR)/objects/scheduler.s.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/task.asm -o $(BUILD_DIR)/objects/task.s.o
-	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/memory/paging.asm -o $(BUILD_DIR)/objects/paging.s.o
+	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/memory/vmm.asm -o $(BUILD_DIR)/objects/vmm.s.o
 
 link:
 	$(LINKER) $(LINKER_FLAGS) -T $(SRC_DIR)/linker.ld build/objects/*.o -o $(BUILD_DIR)/vos.bin

@@ -8,7 +8,8 @@
 #include "routines/timer.h"
 #include "routines/keyboard.h"
 #include "task.h"
-#include "memory/paging.h"
+#include "memory/pmm.h"
+#include "memory/vmm.h"
 // #include "schedulers/priority.h"
 #include "schedulers/rr.h"
 #include "schedulers/scheduler.h"
@@ -33,7 +34,10 @@ SchedulerStrategy rr_strategy = {
     .addTask = addTaskRR,
     .removeTask = removeTaskRR 
 };
-PageTable pagingTable;
+
+__attribute__((aligned(4096)))
+uint32_t page_directory[PDE_COUNT];
+uint32_t *page_tables[PDE_COUNT];
 
 Timer sys_timer;
 Keyboard sys_keyboard;
@@ -57,17 +61,17 @@ IRQHandler irq_routines[16] = {
 };
 
 void task1(void) {
-    char c = 'x';
+    char c = '1';
     while (1) print(&c);
 }
 
 void task2(void) {
-    char c = 'l';
+    char c = '5';
     while (1) print(&c);
 }
 
 void task3(void) {
-    char c = 'y';
+    char c = '7';
     while (1) print(&c);
 }
 
@@ -164,7 +168,8 @@ void main () {
     idt[128] = createIDTDescriptor((uint32_t)isr128, 0x08, 0x8E);
     idt[177] = createIDTDescriptor((uint32_t)isr177, 0x08, 0x8E);
     loadIDT((uint32_t)&idtr);
-    initPaging(&pagingTable);
+    initPmm(16 * 1024 * 1024);  // 16 MB
+    initVmm(page_directory, page_tables);
 
     initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS);
     initTimer(&sys_timer, 100, &scheduler);
