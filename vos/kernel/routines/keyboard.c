@@ -3,12 +3,6 @@
 #include "utils/io.h"
 #include "utils/vga.h"
 
-#include <stdint.h>
-#include "routines/keyboard.h"
-#include "utils/io.h"
-#include "utils/vga.h"
-
-
 Keyboard *keyboard;
 
 const char scanCodesLower[] = {

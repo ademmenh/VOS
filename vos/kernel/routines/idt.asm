@@ -68,8 +68,6 @@ ISR_NOERRCODE 28
 ISR_NOERRCODE 29
 ISR_NOERRCODE 30
 ISR_NOERRCODE 31
-ISR_NOERRCODE 128
-ISR_NOERRCODE 177
 
 IRQ 0,  32
 IRQ 1,  33
@@ -92,7 +90,6 @@ IRQ 15, 47
 loadIDT:
     mov eax, [esp+4]
     lidt [eax]
-    sti
     ret
 
 handleISR:
@@ -171,15 +168,3 @@ dispatchIRQ:
     add esp, 8
     sti 
     iret
-
-loadPaging:
-    push ebp
-    mov ebp, esp
-    mov eax, [ebp + 8] 
-    mov cr3, eax       
-    mov eax, cr0
-    or eax, 0x80000001
-    mov cr0, eax
-    pop ebp
-    ret
-

@@ -2,6 +2,7 @@
 #define SCHEDULER_H
 
 #include "task.h"
+#include "tss.h"
 
 typedef struct Scheduler Scheduler;
 
@@ -11,9 +12,13 @@ struct SchedulerStrategy {
     void (*init)(Scheduler *scheduler);
     void (*schedule)(Scheduler *scheduler);
     void (*yield)(Scheduler *scheduler);
-    int (*addTask)(Scheduler *scheduler, void (*func)(void));
+    int (*addTask)(Scheduler *scheduler, void (*func)(void), int mode);
     void (*removeTask)(Scheduler *scheduler, int task_id);
 };
+
+#include "tss.h"
+
+// ... (existing code)
 
 struct Scheduler {
     struct SchedulerStrategy *strategy;
@@ -21,15 +26,18 @@ struct Scheduler {
     int max_tasks;
     int task_count;
     int current_idx;
+    uint32_t *page_directory;
+    uint32_t **page_tables;
+    TSS *tss;
 };
 
-void initScheduler(Scheduler *scheduler, SchedulerStrategy *strategy, Task *tasks, int max_tasks);
+void initScheduler(Scheduler *scheduler, SchedulerStrategy *strategy, Task *tasks, int max_tasks, uint32_t *page_directory, uint32_t **page_tables, TSS *tss);
 
 void schedule(Scheduler *scheduler);
 
 void yield(Scheduler *scheduler);
 
-int addTask(Scheduler *scheduler, void (*func)(void));
+int addTask(Scheduler *scheduler, void (*func)(void), int mode);
 
 void removeTask(Scheduler *scheduler, int task_id);
 

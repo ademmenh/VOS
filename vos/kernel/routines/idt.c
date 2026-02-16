@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "idt.h"
+#include "routines/idt.h"
 #include "utils/memset.h"
 #include "utils/io.h"
 
@@ -16,11 +16,13 @@ IDTDescriptor createIDTDescriptor(uint32_t base, uint16_t selector, uint8_t flag
 void handleIRQ(InterruptRegisters *regs){
     IRQHandler handler;
     handler = irq_routines[regs->int_no - 0x20];
-    if (handler) handler(regs);
+    if (handler) {
+        handler(regs);
         if (regs->int_no >= 40) outb(0xA0, 0x20);
         // EOI - master
         outb(0x20, 0x20);
     }
+}
 
 void installIRQ(IRQHandler *irq_routine, IRQHandler handler){
     *irq_routine = handler;

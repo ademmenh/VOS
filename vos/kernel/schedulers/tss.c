@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "tss.h"
+#include "schedulers/tss.h"
 #include "utils/memset.h"
 
 void setTSS(TSS *tss, uint16_t ss0, uint32_t esp0){

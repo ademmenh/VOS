@@ -1,12 +1,15 @@
 #include "schedulers/scheduler.h"
-#include "task.h"
+#include "schedulers/task.h"
 
-void initScheduler(Scheduler *sched, SchedulerStrategy *strategy, Task *tasks, int max_tasks) {
+void initScheduler(Scheduler *sched, SchedulerStrategy *strategy, Task *tasks, int max_tasks, uint32_t *page_directory, uint32_t **page_tables, TSS *tss) {
     sched->strategy = strategy;
     sched->tasks = tasks;
     sched->max_tasks = max_tasks;
     sched->task_count = 1;
     sched->current_idx = 0;
+    sched->page_directory = page_directory;
+    sched->page_tables = page_tables;
+    sched->tss = tss;
     if (!strategy || !strategy->init) return;
     strategy->init(sched);
 }
@@ -20,8 +23,8 @@ void yield(Scheduler *scheduler) {
     if (scheduler->strategy && scheduler->strategy->yield) scheduler->strategy->yield(scheduler);
 }
 
-int addTask(Scheduler *scheduler, void (*func)(void)) {
-    if (scheduler->strategy && scheduler->strategy->addTask) return scheduler->strategy->addTask(scheduler, func);
+int addTask(Scheduler *scheduler, void (*func)(void), int mode) {
+    if (scheduler->strategy && scheduler->strategy->addTask) return scheduler->strategy->addTask(scheduler, func, mode);
     return -1;
 }
 

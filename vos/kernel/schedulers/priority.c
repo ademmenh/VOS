@@ -1,6 +1,6 @@
 #include "schedulers/priority.h"
 #include "utils/memset.h"
-#include "task.h"
+#include "schedulers/task.h"
 
 extern void contextSwitch(uint32_t **prev_esp_ptr, uint32_t *next_esp);
 
@@ -62,7 +62,7 @@ void yieldPriority(Scheduler *scheduler) {
     schedulePriority(scheduler);
 }
 
-int addTaskPriority(Scheduler *scheduler, void (*func)(void)) {
+int addTaskPriority(Scheduler *scheduler, void (*func)(void), int mode) {
     if (scheduler->task_count >= scheduler->max_tasks) return -1;
     Task *t = &scheduler->tasks[scheduler->task_count];
     memset(t, 0, sizeof(Task));
@@ -83,7 +83,10 @@ int addTaskPriority(Scheduler *scheduler, void (*func)(void)) {
 }
 
 void removeTaskPriority(Scheduler *scheduler, int task_id) {
-    if (task_id >= 0 && task_id < scheduler->task_count) scheduler->tasks[task_id].state = TASK_TERMINATED;
+    if (task_id >= 0 && task_id < scheduler->task_count) {
+        deallocateKStack(scheduler, task_id);
+        scheduler->tasks[task_id].state = TASK_TERMINATED;
+    }
 }
 
 void setTaskPriority(Scheduler *scheduler, int task_id, int priority) {

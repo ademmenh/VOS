@@ -9,7 +9,9 @@
 
 void initVmm(uint32_t *page_dir, uint32_t **page_tables);
 void mapVmm(uint32_t *page_dir, uint32_t **page_tables, uint32_t virt, uint32_t phys, uint32_t flags);
+void unmapVmm(uint32_t *page_dir, uint32_t **page_tables, uint32_t virt);
 
 extern void enablePaging(uint32_t *page_dir);
+extern void invalidatePage(uint32_t virt);
 
 #endif

@@ -42,12 +42,12 @@ c_bins:
 
 asm_bins:
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/boot/boot.asm -o $(BUILD_DIR)/objects/boot.o
-	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/gdt.asm -o $(BUILD_DIR)/objects/gdt.s.o
-	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/tss.asm -o $(BUILD_DIR)/objects/tss.s.o
+	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/memory/gdt.asm -o $(BUILD_DIR)/objects/gdt.s.o
+	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/schedulers/tss.asm -o $(BUILD_DIR)/objects/tss.s.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/utils/io.asm -o $(BUILD_DIR)/objects/io.s.o
-	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/idt.asm -o $(BUILD_DIR)/objects/idt.s.o
+	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/routines/idt.asm -o $(BUILD_DIR)/objects/idt.s.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/schedulers/scheduler.asm -o $(BUILD_DIR)/objects/scheduler.s.o
-	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/task.asm -o $(BUILD_DIR)/objects/task.s.o
+	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/schedulers/task.asm -o $(BUILD_DIR)/objects/task.s.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/memory/vmm.asm -o $(BUILD_DIR)/objects/vmm.s.o
 
 link:
