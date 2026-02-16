@@ -2,7 +2,7 @@
 #define KEYBIARD_H 
 
 #include <stdint.h>
-#include "idt.h"
+#include "routines/idt.h"
 
 typedef struct {
     uint64_t shiftPressed;

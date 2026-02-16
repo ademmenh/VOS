@@ -2,7 +2,7 @@
 #define TIMER_H
 
 #include <stdint.h>
-#include "idt.h"
+#include "routines/idt.h"
 #include "schedulers/scheduler.h"
 
 typedef struct {

@@ -1,16 +1,15 @@
 #include <stdint.h>
-#include "gdt.h"
-#include "idt.h"
-#include "tss.h"
+#include "memory/gdt.h"
+#include "routines/idt.h"
+#include "schedulers/tss.h"
 #include "utils/io.h"
 #include "utils/memset.h"
 #include "utils/vga.h"
 #include "routines/timer.h"
 #include "routines/keyboard.h"
-#include "task.h"
+#include "schedulers/task.h"
 #include "memory/pmm.h"
 #include "memory/vmm.h"
-// #include "schedulers/priority.h"
 #include "schedulers/rr.h"
 #include "schedulers/scheduler.h"
 
@@ -59,20 +58,18 @@ IRQHandler irq_routines[16] = {
     0, 
     0, 
 };
+extern uint32_t kernel_end;
 
 void task1(void) {
-    char c = '1';
-    while (1) print(&c);
+    while (1) print("1");
 }
 
 void task2(void) {
-    char c = '5';
-    while (1) print(&c);
+    while (1) print("5");
 }
 
 void task3(void) {
-    char c = '7';
-    while (1) print(&c);
+    while (1) print("7");
 }
 
 void main () {
@@ -99,6 +96,7 @@ void main () {
     idtr.limit = sizeof(idt) - 1;
     idtr.base = (uint32_t)&idt;
     memset(&idt, 0, sizeof(idt));
+    loadIDT((uint32_t)&idtr);
     // ICW1 - master
     outb(0x20, 0x11);
     // ICW1 - slave
@@ -165,21 +163,18 @@ void main () {
     idt[45] = createIDTDescriptor((uint32_t)irq13, 0x08, 0x8E);
     idt[46] = createIDTDescriptor((uint32_t)irq14, 0x08, 0x8E);
     idt[47] = createIDTDescriptor((uint32_t)irq15, 0x08, 0x8E);
-    idt[128] = createIDTDescriptor((uint32_t)isr128, 0x08, 0x8E);
-    idt[177] = createIDTDescriptor((uint32_t)isr177, 0x08, 0x8E);
-    loadIDT((uint32_t)&idtr);
-    initPmm(16 * 1024 * 1024);  // 16 MB
+    // idt[128] = createIDTDescriptor((uint32_t)isr128, 0x08, 0x8E);
+    // idt[177] = createIDTDescriptor((uint32_t)isr177, 0x08, 0x8E);
+    initPmm(16 * 1024 * 1024, (uint32_t)&kernel_end);  // 16 MB
     initVmm(page_directory, page_tables);
-
-    initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS);
+    initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS, page_directory, page_tables, &tss);
     initTimer(&sys_timer, 100, &scheduler);
     installIRQ(&irq_routines[0], handleTimer);
     initKeyboard(&sys_keyboard);
     installIRQ(&irq_routines[1], handleKeyboard);
     Reset();
-    int t1 = addTask(&scheduler, task1);
-    int t2 = addTask(&scheduler, task2);
-    int t3 = addTask(&scheduler, task3);
-
+    int t1 = addTask(&scheduler, task1, 0); // Ring 3
+    int t2 = addTask(&scheduler, task2, 0); // Ring 0
+    int t3 = addTask(&scheduler, task3, 0); // Ring 0
     while(1);
 }

@@ -1,5 +1,5 @@
-#include "gdt.h"
-#include "tss.h"
+#include "memory/gdt.h"
+#include "schedulers/tss.h"
 
 GDTDescriptor createGDTDescriptor(uint32_t base, uint32_t limit, uint8_t access, uint8_t flags){
     GDTDescriptor descriptor;
