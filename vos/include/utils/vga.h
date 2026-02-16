@@ -22,8 +22,13 @@
 
 void putc(char c);
 void print(const char* s);
-void scrollUp();
-void newLine();
-void Reset();
+void vgaScrollUp();
+void vgaNewLine();
+void vgaClear();
+void printDec(uint32_t num);
+void printHex(uint32_t num);
+void printDec(uint32_t num);
+void printHex(uint32_t num);
+void printf(const char* fmt, ...);
 
 #endif
