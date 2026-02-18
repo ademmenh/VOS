@@ -6,6 +6,7 @@
 
 uint16_t column = 0;
 uint16_t line = 0;
+// uint16_t* const vga = (uint16_t* const)(0xB8000 + KERNEL_OFFSET);
 uint16_t* const vga = (uint16_t* const)(0xB8000 + KERNEL_OFFSET);
 const uint16_t defaultColor = (COLOR8_LIGHT_GREY << 8) | (COLOR8_BLACK << 12);
 uint16_t currentColor = defaultColor;

@@ -62,7 +62,7 @@ void yieldPriority(Scheduler *scheduler) {
     schedulePriority(scheduler);
 }
 
-int addTaskPriority(Scheduler *scheduler, void (*func)(void), int mode) {
+int addTaskPriority(Scheduler *scheduler, void (*func)(void)) {
     if (scheduler->task_count >= scheduler->max_tasks) return -1;
     Task *t = &scheduler->tasks[scheduler->task_count];
     memset(t, 0, sizeof(Task));

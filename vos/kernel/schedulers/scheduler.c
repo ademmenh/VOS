@@ -23,8 +23,8 @@ void yield(Scheduler *scheduler) {
     if (scheduler->strategy && scheduler->strategy->yield) scheduler->strategy->yield(scheduler);
 }
 
-int addTask(Scheduler *scheduler, void (*func)(void), int mode) {
-    if (scheduler->strategy && scheduler->strategy->addTask) return scheduler->strategy->addTask(scheduler, func, mode);
+int addTask(Scheduler *scheduler, void (*func)(void)) {
+    if (scheduler->strategy && scheduler->strategy->addTask) return scheduler->strategy->addTask(scheduler, func);
     return -1;
 }
 
