@@ -9,7 +9,7 @@ void schedulePriority(Scheduler *scheduler);
 
 void yieldPriority(Scheduler *scheduler);
     
-int addTaskPriority(Scheduler *scheduler, void (*func)(void), int mode);
+int addTaskPriority(Scheduler *scheduler, void (*func)(void));
 
 void removeTaskPriority(Scheduler *scheduler, int task_id);
 

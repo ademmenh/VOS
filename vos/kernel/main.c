@@ -62,16 +62,18 @@ IRQHandler irq_routines[16] = {
 extern uint32_t KERNEL_END;
 
 void task1(void) {
-    while (1) print("1");
+    char c = '1';
+    while (1) print(&c);
 }
 
-void task2(void) {
-    while (1) print("-");
-}
+// void task2(void) {
+//     char c = '-';
+//     while (1) print(&c);
+// }
 
-void task3(void) {
-    while (1) print("7");
-}
+// void task3(void) {
+//     while (1) print("7");
+// }
 
 void main () {
     // uint32_t cr0;
@@ -195,8 +197,8 @@ void main () {
     initVmm(pageDirectory, pageTables);
     
     initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS, pageDirectory, pageTables, &tss);
-    int t1 = addTask(&scheduler, task1, 0); // Ring 0
-    int t2 = addTask(&scheduler, task2, 0); // Ring 0
-    int t3 = addTask(&scheduler, task3, 0); // Ring 0
+    int t1 = addTask(&scheduler, task1); // Ring 0
+    // int t2 = addTask(&scheduler, task2); // Ring 0
+    // int t3 = addTask(&scheduler, task3); // Ring 0
     while(1);
 }
