@@ -26,12 +26,12 @@ struct Scheduler {
     int max_tasks;
     int task_count;
     int current_idx;
-    uint32_t *page_directory;
-    uint32_t **page_tables;
+    uint32_t *pageDirectory;
+    uint32_t **pageTables;
     TSS *tss;
 };
 
-void initScheduler(Scheduler *scheduler, SchedulerStrategy *strategy, Task *tasks, int max_tasks, uint32_t *page_directory, uint32_t **page_tables, TSS *tss);
+void initScheduler(Scheduler *scheduler, SchedulerStrategy *strategy, Task *tasks, int max_tasks, uint32_t *pageDirectory, uint32_t **pageTables, TSS *tss);
 
 void schedule(Scheduler *scheduler);
 

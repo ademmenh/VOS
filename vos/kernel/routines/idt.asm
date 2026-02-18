@@ -2,8 +2,6 @@ global loadIDT
 
 global handleISR
 
-global page_fault_interrupt
-
 global loadPaging
 
 extern handleIRQ
@@ -138,7 +136,7 @@ dispatchISR:
 
     popa
     add esp, 8
-    sti 
+    ; sti 
     iret
 
 dispatchIRQ:
@@ -166,5 +164,5 @@ dispatchIRQ:
 
     popa
     add esp, 8
-    sti 
+    ; sti 
     iret

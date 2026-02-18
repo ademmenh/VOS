@@ -12,8 +12,8 @@ GCC_DEBUG_FLAGS		:= -g
 ASM_FLAGS			:= -f elf32
 LINKER_FLAGS		:= -m elf_i386
 GRUB_MAKE_FLAGS 	:= -o $(ISO)
-QEMU_FLAGS			:= -cdrom
-QEMU_DEBUG_FLAGS	:= -s -S
+QEMU_FLAGS			:= -no-reboot -cdrom
+QEMU_DEBUG_FLAGS	:= -d int -no-reboot
 
 BUILD_DIR			:= build
 ISO_DIR				:= iso
@@ -49,6 +49,7 @@ asm_bins:
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/schedulers/scheduler.asm -o $(BUILD_DIR)/objects/scheduler.s.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/schedulers/task.asm -o $(BUILD_DIR)/objects/task.s.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/memory/vmm.asm -o $(BUILD_DIR)/objects/vmm.s.o
+	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/utils/asm.asm -o $(BUILD_DIR)/objects/asm.s.o
 
 link:
 	$(LINKER) $(LINKER_FLAGS) -T $(SRC_DIR)/linker.ld build/objects/*.o -o $(BUILD_DIR)/vos.bin
@@ -84,6 +85,3 @@ $(DISO): setup debug_bins
 
 demulate: $(DISO)
 	$(QEMU) $(QEMU_DEBUG_FLAGS) $(QEMU_FLAGS) $< -boot d
-
-debug:
-	gdb $(BUILD_DIR)/vos.bin -ex "target remote localhost:1234"

@@ -12,12 +12,12 @@ void *allocateKStack(Scheduler *scheduler) {
     uint32_t pages_needed = KSTACK_SIZE / PAGE_SIZE;
     
     for (uint32_t i = 0; i < pages_needed; i++) {
-        int frame = allocFrame();
+        int frame = allocPhysicalPage();
         if (frame < 0) return NULL;
         uint32_t phys = frame * PAGE_SIZE;
         // Map pages starting AFTER the guard page
         uint32_t virt = virt_base + (i * PAGE_SIZE);
-        mapVmm(scheduler->page_directory, scheduler->page_tables, virt, phys, PAGE_RW);
+        mapVmm(scheduler->pageDirectory, scheduler->pageTables, virt, phys, PAGE_RW);
     }
     return (void*)virt_base;
 }
@@ -30,12 +30,12 @@ void *allocateUserStack(Scheduler *scheduler, int task_id) {
     uint32_t pages_needed = USTACK_SIZE / PAGE_SIZE;
     
     for (uint32_t i = 0; i < pages_needed; i++) {
-        int frame = allocFrame();
+        int frame = allocPhysicalPage();
         if (frame < 0) return NULL;
         uint32_t phys = frame * PAGE_SIZE;
         // Map pages starting AFTER the guard page
         uint32_t virt = virt_base + (i * PAGE_SIZE);
-        mapVmm(scheduler->page_directory, scheduler->page_tables, virt, phys, PAGE_RW | PAGE_USER);
+        mapVmm(scheduler->pageDirectory, scheduler->pageTables, virt, phys, PAGE_RW | PAGE_USER);
     }
     return (void*)virt_base;
 }
@@ -47,6 +47,6 @@ void deallocateKStack(Scheduler *scheduler, int task_id) {
 
     for (uint32_t i = 0; i < pages_needed; i++) {
         uint32_t virt = virt_base + (i * PAGE_SIZE);
-        unmapVmm(scheduler->page_directory, scheduler->page_tables, virt);
+        unmapVmm(scheduler->pageDirectory, scheduler->pageTables, virt);
     }
 }

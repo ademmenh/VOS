@@ -35,20 +35,26 @@ char scanCodeToAscii(unsigned char scanCode) {
     return 0;
 }
 
-void handleKeyboard(InterruptRegisters *regs){
+void handleKeyboard(InterruptRegisters *regs) {
     unsigned char scanCode = inb(0x60);
-    unsigned char c = scanCode & 0x7F;
-    unsigned char press = scanCode & 0x80;
 
-    // Handle shift keys
-    if (c == 0x2A || c == 0x36) {
-        if (press) keyboard->shiftPressed = 0;
-        else keyboard->shiftPressed = 1;
+    unsigned char released = scanCode & 0x80;
+    unsigned char key = scanCode & 0x7F;
+
+    // Shift keys
+    if (key == 0x2A || key == 0x36) {
+        keyboard->shiftPressed = !released;
+        outb(0x20, 0x20);   // EOI
         return;
     }
 
-    if (!press) {
-        char asciiChar = scanCodeToAscii(c);
-        if (asciiChar) putc(asciiChar);
+    // Only on key press
+    if (!released) {
+        char asciiChar = scanCodeToAscii(key);
+        if (asciiChar)
+            putc(asciiChar);
     }
+
+    outb(0x20, 0x20);   // EOI
 }
+

@@ -12,6 +12,7 @@
 #include "memory/vmm.h"
 #include "schedulers/rr.h"
 #include "schedulers/scheduler.h"
+#include "utils/asm.h"
 
 #define GDT_LENGTH 6
 #define IDT_LENGTH 256
@@ -34,9 +35,9 @@ SchedulerStrategy rr_strategy = {
     .removeTask = removeTaskRR 
 };
 
-__attribute__((aligned(4096)))
-uint32_t page_directory[PDE_COUNT];
-uint32_t *page_tables[PDE_COUNT];
+extern uint32_t pageDirectory[PDE_COUNT];
+extern uint32_t pageTable[PTE_COUNT];
+static uint32_t *pageTables[PDE_COUNT];
 
 Timer sys_timer;
 Keyboard sys_keyboard;
@@ -58,14 +59,14 @@ IRQHandler irq_routines[16] = {
     0, 
     0, 
 };
-extern uint32_t kernel_end;
+extern uint32_t KERNEL_END;
 
 void task1(void) {
     while (1) print("1");
 }
 
 void task2(void) {
-    while (1) print("5");
+    while (1) print("-");
 }
 
 void task3(void) {
@@ -73,6 +74,17 @@ void task3(void) {
 }
 
 void main () {
+    // uint32_t cr0;
+    // asm volatile ("mov %%cr0, %0" : "=r"(cr0));
+    // if (cr0 & 1)
+    //     print("Protected mode\n");
+    // else
+    //     print("Real mode\n");
+
+    // init TSS
+    tr.base = (uint32_t) &tss;
+    tr.limit = sizeof(tss) - 1;
+
     // init GDT
     gdtr.limit = sizeof(gdt) - 1;
     gdtr.base = (uint32_t)&gdt;
@@ -81,22 +93,15 @@ void main () {
     gdt[2] = createGDTDescriptor(0, 0xFFFFFFFF, 0x92, 0xCF);   // Kernel Data Segment
     gdt[3] = createGDTDescriptor(0, 0xFFFFFFFF, 0xFA, 0xCF);   // User Code Segment
     gdt[4] = createGDTDescriptor(0, 0xFFFFFFFF, 0xF2, 0xCF);   // User Data Segment
-
-    // init TSS
-    tr.base = (uint32_t) &tss;
-    // tr.limit = tr.base + sizeof(tss);
-    tr.limit = sizeof(tss) - 1;
     gdt[5] = createGDTDescriptor(tr.base, tr.limit, 0xE9, 0x00);
     setTSS(&tss, 0x10, 0x0);
-
     loadGDT((uint32_t)&gdtr);
     loadTSS();
-
+    
     // init IDT
     idtr.limit = sizeof(idt) - 1;
     idtr.base = (uint32_t)&idt;
     memset(&idt, 0, sizeof(idt));
-    loadIDT((uint32_t)&idtr);
     // ICW1 - master
     outb(0x20, 0x11);
     // ICW1 - slave
@@ -165,15 +170,32 @@ void main () {
     idt[47] = createIDTDescriptor((uint32_t)irq15, 0x08, 0x8E);
     // idt[128] = createIDTDescriptor((uint32_t)isr128, 0x08, 0x8E);
     // idt[177] = createIDTDescriptor((uint32_t)isr177, 0x08, 0x8E);
-    initPmm(16 * 1024 * 1024, (uint32_t)&kernel_end);  // 16 MB
-    initVmm(page_directory, page_tables);
-    initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS, page_directory, page_tables, &tss);
-    initTimer(&sys_timer, 100, &scheduler);
+    loadIDT((uint32_t)&idtr);
+    initTimer(&sys_timer, 10, &scheduler);
     installIRQ(&irq_routines[0], handleTimer);
     initKeyboard(&sys_keyboard);
     installIRQ(&irq_routines[1], handleKeyboard);
-    Reset();
-    int t1 = addTask(&scheduler, task1, 0); // Ring 3
+    sti();
+    vgaClear();
+
+    // init PMM, VMM
+    uint32_t mem_size = 0xFFFFFFFF;
+    // printHex(mem_size);
+    // vgaNewLine();
+    // printDec(mem_size);
+    // vgaNewLine();
+    uint32_t total_frames = mem_size / PAGE_SIZE;
+    // printHex(total_frames);
+    // vgaNewLine();
+    // printDec(total_frames);
+    // vgaNewLine();
+    // printf("Total frames: %d\n", total_frames);
+    // printf("total frammes Address: %p\n", &total_frames);
+    initPmm(total_frames);
+    initVmm(pageDirectory, pageTables);
+    
+    initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS, pageDirectory, pageTables, &tss);
+    int t1 = addTask(&scheduler, task1, 0); // Ring 0
     int t2 = addTask(&scheduler, task2, 0); // Ring 0
     int t3 = addTask(&scheduler, task3, 0); // Ring 0
     while(1);

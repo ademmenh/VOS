@@ -33,7 +33,7 @@ typedef struct {
     int id;
     TaskState state;
     int priority;
-    uint32_t *page_directory; // CR3
+    uint32_t *pageDirectory; // CR3
     uint32_t esp0;         // Kernel stack top for TSS
     int mode;              // 0 = Kernel, 3 = User
     uint8_t *kstack;       // kernel stack base pointer 
