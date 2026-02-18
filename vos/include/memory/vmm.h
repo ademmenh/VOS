@@ -3,15 +3,20 @@
 
 #include <stdint.h>
 
+#define KERNEL_OFFSET  0xC0000000
+
 #define PAGE_PRESENT   (1 << 0)
 #define PAGE_RW        (1 << 1)
 #define PAGE_USER      (1 << 2)
 
-void initVmm(uint32_t *page_dir, uint32_t **page_tables);
-void mapVmm(uint32_t *page_dir, uint32_t **page_tables, uint32_t virt, uint32_t phys, uint32_t flags);
-void unmapVmm(uint32_t *page_dir, uint32_t **page_tables, uint32_t virt);
+void initVmm(uint32_t *pageDirectory, uint32_t **pageTables);
+void mapVmm(uint32_t *pageDirectory, uint32_t **pageTables, uint32_t virt, uint32_t phys, uint32_t flags);
+void unmapVmm(uint32_t *pageDirectory, uint32_t **pageTables, uint32_t virt);
 
-extern void enablePaging(uint32_t *page_dir);
+extern void enablePaging(uint32_t *pageDirectory_phys);
 extern void invalidatePage(uint32_t virt);
+
+static inline uint32_t virtualToPhysical(uint32_t v);
+static inline uint32_t physicalToVirtual(uint32_t p);
 
 #endif

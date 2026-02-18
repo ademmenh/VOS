@@ -1,14 +1,14 @@
 #include "schedulers/scheduler.h"
 #include "schedulers/task.h"
 
-void initScheduler(Scheduler *sched, SchedulerStrategy *strategy, Task *tasks, int max_tasks, uint32_t *page_directory, uint32_t **page_tables, TSS *tss) {
+void initScheduler(Scheduler *sched, SchedulerStrategy *strategy, Task *tasks, int max_tasks, uint32_t *pageDirectory, uint32_t **pageTables, TSS *tss) {
     sched->strategy = strategy;
     sched->tasks = tasks;
     sched->max_tasks = max_tasks;
     sched->task_count = 1;
     sched->current_idx = 0;
-    sched->page_directory = page_directory;
-    sched->page_tables = page_tables;
+    sched->pageDirectory = pageDirectory;
+    sched->pageTables = pageTables;
     sched->tss = tss;
     if (!strategy || !strategy->init) return;
     strategy->init(sched);

@@ -4,7 +4,6 @@ global contextSwitch
 global taskTrampoline
 
 taskTrampoline:
-    sti
     call edi
     jmp $
 

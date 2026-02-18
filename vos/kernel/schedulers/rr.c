@@ -46,7 +46,7 @@ int addTaskRR(Scheduler *scheduler, void (*func)(void), int mode) {
     t->id = scheduler->task_count;
     t->state = TASK_RUNNABLE;
     t->mode = mode;
-    t->page_directory = scheduler->page_directory; // Shared PD
+    t->pageDirectory = scheduler->pageDirectory;
     // Allocate Kernel Stack
     t->kstack = allocateKStack(scheduler);
     if (!t->kstack) return -1;
