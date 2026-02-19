@@ -31,4 +31,7 @@ SECTIONS {
     }
 
     KERNEL_END = .;
+
+    . = ALIGN(4K);
+    HEAP_START = .;
 }
