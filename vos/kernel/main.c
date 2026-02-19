@@ -37,6 +37,7 @@ SchedulerStrategy rr_strategy = {
 
 extern uint32_t pageDirectory[PDE_COUNT];
 extern uint32_t pageTable[PTE_COUNT];
+extern uint32_t stackPageTable[PTE_COUNT];
 static uint32_t *pageTables[PDE_COUNT];
 
 Timer sys_timer;
@@ -66,22 +67,22 @@ void task1(void) {
     while (1) print(&c);
 }
 
-// void task2(void) {
-//     char c = '-';
-//     while (1) print(&c);
-// }
+void task2(void) {
+    char c = '-';
+    while (1) print(&c);
+}
 
-// void task3(void) {
-//     while (1) print("7");
-// }
+void task3(void) {
+    while (1) print("7");
+}
 
 void main () {
     // uint32_t cr0;
     // asm volatile ("mov %%cr0, %0" : "=r"(cr0));
     // if (cr0 & 1)
-    //     print("Protected mode\n");
+    //     printf("Protected mode\n");
     // else
-    //     print("Real mode\n");
+    //     printf("Real mode\n");
 
     // init TSS
     tr.base = (uint32_t) &tss;
@@ -178,27 +179,46 @@ void main () {
     initKeyboard(&sys_keyboard);
     installIRQ(&irq_routines[1], handleKeyboard);
     sti();
-    vgaClear();
+    // vgaClear();
+
+    printf("pageDirectory address: %p\n", pageDirectory);
+    printf("pageTable address: %p\n", pageTable);
+    printf("stackPageTable address: %p\n", stackPageTable);
+    printf("pageDirectory[768]: %p\n", pageDirectory[768]);
+    printf("pageDirectory[1023]: %p\n", pageDirectory[1023]);
+    printf("pageTable[0]: %p\n", pageTable[0]);
+    printf("pageTable[1]: %p\n", pageTable[1]);
+    printf("pageTable[2]: %p\n", pageTable[2]);
+    printf("pageTable[3]: %p\n", pageTable[3]);
+    printf("pageTable[1020]: %p\n", pageTable[1020]);
+    printf("pageTable[1021]: %p\n", pageTable[1021]);
+    printf("pageTable[1022]: %p\n", pageTable[1022]);
+    printf("pageTable[1023]: %p\n", pageTable[1023]);
+    printf("stackPageTable[1020]: %p\n", stackPageTable[1020]);
+    printf("stackPageTable[1021]: %p\n", stackPageTable[1021]);
+    printf("stackPageTable[1022]: %p\n", stackPageTable[1022]);
+    printf("stackPageTable[1023]: %p\n", stackPageTable[1023]);
+    // printf("KERNEL_START: %p\n", (uint32_t)&KERNEL_START);
+    // printf("KERNEL_END: %p\n", (uint32_t)&KERNEL_END);
+    // printf("kernel size: %d\n", (uint32_t)&KERNEL_END - (uint32_t)&KERNEL_START);
+    // printf("kernel frames: %d\n", (uint32_t)KERNEL_FRAMES);
+    printf("kernel end: %p\n", (uint32_t)&KERNEL_END);
+    printf("kernel offset: %p\n", (uint32_t)KERNEL_OFFSET);
+    printf("kernel size: %d\n", (uint32_t)&KERNEL_END - (uint32_t)KERNEL_OFFSET);
+    printf("kernel frames: %d\n", (uint32_t)KERNEL_FRAMES);
 
     // init PMM, VMM
     uint32_t mem_size = 0xFFFFFFFF;
-    // printHex(mem_size);
-    // vgaNewLine();
-    // printDec(mem_size);
-    // vgaNewLine();
     uint32_t total_frames = mem_size / PAGE_SIZE;
-    // printHex(total_frames);
-    // vgaNewLine();
-    // printDec(total_frames);
-    // vgaNewLine();
+    // printf("Total memory: %d\n", mem_size);
     // printf("Total frames: %d\n", total_frames);
     // printf("total frammes Address: %p\n", &total_frames);
     initPmm(total_frames);
     initVmm(pageDirectory, pageTables);
-    
+
     initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS, pageDirectory, pageTables, &tss);
-    int t1 = addTask(&scheduler, task1); // Ring 0
-    // int t2 = addTask(&scheduler, task2); // Ring 0
-    // int t3 = addTask(&scheduler, task3); // Ring 0
+    // int t1 = addTask(&scheduler, task1);
+    // int t2 = addTask(&scheduler, task2);
+    // int t3 = addTask(&scheduler, task3);
     while(1);
 }

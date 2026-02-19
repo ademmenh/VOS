@@ -1,6 +1,6 @@
 ENTRY(start)
 
-KERNEL_VMA = 0xC0000000;
+KERNEL_OFFSET = 0xC0000000;
 
 SECTIONS {
     . = 0x00100000;
@@ -9,23 +9,23 @@ SECTIONS {
         *(.multiboot)
     }
 
-    . += KERNEL_VMA;
+    . += KERNEL_OFFSET;
 
     KERNEL_START = .;
 
-    .text ALIGN(4K) : AT(ADDR(.text) - KERNEL_VMA) {
+    .text ALIGN(4K) : AT(ADDR(.text) - KERNEL_OFFSET) {
         *(.text)
     }
 
-    .rodata ALIGN(4K) : AT(ADDR(.rodata) - KERNEL_VMA) {
+    .rodata ALIGN(4K) : AT(ADDR(.rodata) - KERNEL_OFFSET) {
         *(.rodata)
     }
 
-    .data ALIGN(4K) : AT(ADDR(.data) - KERNEL_VMA) {
+    .data ALIGN(4K) : AT(ADDR(.data) - KERNEL_OFFSET) {
         *(.data)
     }
 
-    .bss ALIGN(4K) : AT(ADDR(.bss) - KERNEL_VMA) {
+    .bss ALIGN(4K) : AT(ADDR(.bss) - KERNEL_OFFSET) {
         *(.bss)
         *(COMMON)
     }
