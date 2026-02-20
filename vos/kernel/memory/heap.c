@@ -1,7 +1,7 @@
 #include "memory/heap.h"
 #include "memory/pmm.h"
 #include "memory/vmm.h"
-#include "utils/memset.h"
+#include "utils/string.h"
 #include <stddef.h>
 
 #define HEAP_MAGIC 0xCAFEBABE
