@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include "routines/idt.h"
-#include "utils/memset.h"
+#include "utils/string.h"
 #include "utils/io.h"
 
 IDTDescriptor createIDTDescriptor(uint32_t base, uint16_t selector, uint8_t flags) {

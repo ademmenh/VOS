@@ -1,6 +1,5 @@
 #include "schedulers/rr.h"
-#include "utils/memset.h"
-#include "utils/memset.h"
+#include "utils/string.h"
 #include "schedulers/task.h"
 #include "schedulers/tss.h"
 

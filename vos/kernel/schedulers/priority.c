@@ -1,5 +1,5 @@
 #include "schedulers/priority.h"
-#include "utils/memset.h"
+#include "utils/string.h"
 #include "schedulers/task.h"
 
 extern void contextSwitch(uint32_t **prev_esp_ptr, uint32_t *next_esp);
