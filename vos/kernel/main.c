@@ -43,8 +43,8 @@ SchedulerStrategy rr_strategy = {
 };
 
 extern uint32_t pageDirectory[PDE_COUNT];
-extern uint32_t pageTable[PTE_COUNT];
-extern uint32_t stackPageTable[PTE_COUNT];
+extern uint32_t kernelPageTable[PTE_COUNT];
+extern uint32_t kernelStackPageTable[PTE_COUNT];
 static uint32_t *pageTables[PDE_COUNT];
 
 VfsMount* vfs_root = NULL;
@@ -255,6 +255,14 @@ void main () {
     char read_msg2[sizeof(msg2)];
     readVfsNode(file, 0, sizeof(msg2), (uint8_t*)read_msg2);
     printf("read_msg2: %s\n", read_msg2);
+
+    uint32_t addr = 0;
+    printf("addr: %p\n", &addr);
+    uint32_t arr [1024*2];
+    printf("arr: %p\n", &arr[4]);
+    uint32_t var = 0x12345678;
+    printf("var: %p\n", &var);
+    
 
     initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS, pageDirectory, pageTables, &tss);
     // int t1 = addTask(&scheduler, task1);

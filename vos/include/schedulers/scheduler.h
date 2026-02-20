@@ -16,10 +16,6 @@ struct SchedulerStrategy {
     void (*removeTask)(Scheduler *scheduler, int task_id);
 };
 
-#include "tss.h"
-
-// ... (existing code)
-
 struct Scheduler {
     struct SchedulerStrategy *strategy;
     Task *tasks;

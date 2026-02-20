@@ -51,7 +51,7 @@ static HeapBlock* expandHeap(uint32_t size) {
     for (uint32_t i = 0; i < pages; i++) {
         int frame = allocPhysicalPage();
         if (frame < 0) return NULL;
-        mapVmm(current_pd, current_pt, heap_end, (uint32_t)frame * 0x1000, PAGE_PRESENT | PAGE_RW);
+        mapPage(current_pd, current_pt, heap_end, (uint32_t)frame * 0x1000, PAGE_PRESENT | PAGE_RW);
         heap_end += 0x1000;
     }
 

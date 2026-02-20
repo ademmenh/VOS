@@ -10,8 +10,8 @@
 #define PAGE_USER      (1 << 2)
 
 void initVmm(uint32_t *pageDirectory, uint32_t **pageTables);
-void mapVmm(uint32_t *pageDirectory, uint32_t **pageTables, uint32_t virt, uint32_t phys, uint32_t flags);
-void unmapVmm(uint32_t *pageDirectory, uint32_t **pageTables, uint32_t virt);
+void mapPage(uint32_t *pageDirectory, uint32_t **pageTables, uint32_t virt, uint32_t phys, uint32_t flags);
+void unmapPage(uint32_t *pageDirectory, uint32_t **pageTables, uint32_t virt);
 
 extern void enablePaging(uint32_t *pageDirectory_phys);
 extern void invalidatePage(uint32_t virt);

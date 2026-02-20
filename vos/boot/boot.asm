@@ -10,6 +10,8 @@ PAGE_DIRTY      equ (1 << 6)
 PAGE_4MB        equ (1 << 7)
 PAGE_GLOBAL     equ (1 << 8)
 
+PAGING_ENABLE   equ (1 << 31)
+
 KERNEL_OFFSET equ 0xC0000000
 
 extern main
@@ -17,8 +19,8 @@ extern KERNEL_END
 
 global start
 global pageDirectory
-global pageTable
-global stackPageTable
+global kernelPageTable
+global kernelStackPageTable
 
 section .multiboot
 align 4
@@ -30,8 +32,8 @@ section .text
 
 start:
     cli
-    ; 1:1 mapping
-    mov edi, pageTable - KERNEL_OFFSET
+    ; kernelPageTable 1:1 mapping
+    mov edi, kernelPageTable - KERNEL_OFFSET
     mov eax, PAGE_PRESENT | PAGE_WRITABLE
     mov ecx, 1024
     .fillPT:
@@ -41,6 +43,7 @@ start:
     dec ecx
     jnz .fillPT
     
+    ; clear PageDirectory
     mov edi, pageDirectory - KERNEL_OFFSET
     xor eax, eax
     mov ecx, 1024
@@ -50,44 +53,40 @@ start:
     dec ecx
     jnz .clearPD
 
-    ; identity mapping PDE 0
-    mov eax, pageTable - KERNEL_OFFSET
+    ; PDE 0 mapping - identity mapping
+    ; PDE 768 mapping - higher-half kernel to 0xC0000000
+    mov eax, kernelPageTable - KERNEL_OFFSET
     or  eax, PAGE_PRESENT | PAGE_WRITABLE
     mov [pageDirectory - KERNEL_OFFSET + 0*4], eax
-    
-    ; map higher-half kernel to PDE 768 - 0xC0000000
     mov [pageDirectory - KERNEL_OFFSET + 768*4], eax
 
-    ; setup stack page table
-    mov edi, stackPageTable - KERNEL_OFFSET
+    ; clear kernelStackPageTable
+    mov edi, kernelStackPageTable - KERNEL_OFFSET
     xor eax, eax
     mov ecx, 1024
-    .clearStackPT:
+    .clearKernelStackPT:
     mov [edi], eax
     add edi, 4
     dec ecx
-    jnz .clearStackPT
+    jnz .clearKernelStackPT
 
-    ; map last 4 entries (1020–1023)
-    mov edi, (stackPageTable - KERNEL_OFFSET) + 1020*4
-    
-    ; mapping kernel stack from the KERNEL_END
-    mov eax, KERNEL_END
-    sub eax, KERNEL_OFFSET
-    ; Align to 4KB (though linker usually does it)
+    ; map kernelStackPageTable from the KERNEL_END
+    mov edi, (kernelStackPageTable - KERNEL_OFFSET) + 1020*4
+    mov eax, KERNEL_END - KERNEL_OFFSET
+    ; Align to next 4KB 
     add eax, 4095
     and eax, 0xFFFFF000
     or eax, PAGE_PRESENT | PAGE_WRITABLE
     mov ecx, 4
-    .mapStack:
+    .mapKernelStack:
     mov [edi], eax
     add eax, 4096
     add edi, 4
     dec ecx
-    jnz .mapStack
+    jnz .mapKernelStack
 
-    ; attach stack page table to PDE[1023]
-    mov eax, stackPageTable - KERNEL_OFFSET
+    ; PDE[1023] mapping - kernelStackPageTable
+    mov eax, kernelStackPageTable - KERNEL_OFFSET
     or  eax, PAGE_PRESENT | PAGE_WRITABLE
     mov [pageDirectory - KERNEL_OFFSET + 1023*4], eax
 
@@ -97,7 +96,7 @@ start:
 
     ; enable cr0.PE
     mov eax, cr0
-    or  eax, 0x80000000
+    or  eax, PAGING_ENABLE
     mov cr0, eax
 
     ; jump to higher half
@@ -126,8 +125,8 @@ align 4096
 pageDirectory:
     resb 4096
 
-pageTable:
+kernelPageTable:
     resb 4096
 
-stackPageTable:
+kernelStackPageTable:
     resb 4096
