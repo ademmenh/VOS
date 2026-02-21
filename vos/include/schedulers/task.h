@@ -24,12 +24,13 @@ typedef struct {
     TaskState state;
     int priority;
     uint32_t *pageDirectory;
+    uint32_t pageDirectoryPhys;
     uint8_t *kstack;
     uint32_t *kstack_top;
     InterruptRegisters regs;
 } Task;
 
-void *allocateStack(Scheduler *scheduler);
-void deallocateStack(Scheduler *scheduler, int task_id);
+void *allocateStack(uint32_t *pd, int task_id);
+void deallocateStack(uint32_t *pd, int task_id);
 
 #endif

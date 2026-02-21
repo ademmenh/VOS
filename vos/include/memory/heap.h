@@ -13,7 +13,7 @@ typedef struct HeapBlock {
 } HeapBlock;
 
 
-void initHeap(uint32_t heap_start, uint32_t heap_initial_size, uint32_t *pd, uint32_t **pt);
+void initHeap(uint32_t heap_start, uint32_t heap_initial_size, uint32_t *pd);
 
 void* kmalloc(uint32_t size);
 

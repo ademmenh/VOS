@@ -7,9 +7,6 @@
 extern uint32_t KERNEL_START;
 extern uint32_t KERNEL_END;
 
-#define PAGE_SIZE      4096
-#define PDE_COUNT      1024
-#define PTE_COUNT      1024
 #define MAX_FRAMES 1048576   // 4GB / 4KB
 
 #define KERNEL_CODE_FRAMES  (((uint32_t)&KERNEL_END - (uint32_t)KERNEL_OFFSET + PAGE_SIZE - 1) / PAGE_SIZE)

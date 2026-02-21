@@ -10,7 +10,6 @@
 static HeapBlock* heap_head = NULL;
 static uint32_t heap_end = 0;
 static uint32_t* current_pd = NULL;
-static uint32_t** current_pt = NULL;
 
 static void splitBlock(HeapBlock* block, uint32_t size) {
     if (block->size <= size + sizeof(HeapBlock) + HEAP_MIN_BLOCK) return;
@@ -45,13 +44,15 @@ static HeapBlock* findFreeBlock(uint32_t size) {
 }
 
 static HeapBlock* expandHeap(uint32_t size) {
+    // Ensure heap_end is page aligned
+    if (heap_end & 0xFFF) heap_end = (heap_end + 0x1000) & ~0xFFF;
     uint32_t pages =(size + sizeof(HeapBlock) + 0xFFF) / 0x1000;
     uint32_t old_heap_end = heap_end;
 
     for (uint32_t i = 0; i < pages; i++) {
         int frame = allocPhysicalPage();
         if (frame < 0) return NULL;
-        mapPage(current_pd, current_pt, heap_end, (uint32_t)frame * 0x1000, PAGE_PRESENT | PAGE_RW);
+        mapPage(current_pd, heap_end, (uint32_t)frame * 0x1000, PAGE_PRESENT | PAGE_RW);
         heap_end += 0x1000;
     }
 
@@ -74,14 +75,23 @@ static HeapBlock* expandHeap(uint32_t size) {
     return block;
 }
 
-void initHeap(uint32_t heap_start, uint32_t heap_initial_size, uint32_t *pd, uint32_t **pt) {
+void initHeap(uint32_t heap_start, uint32_t heap_initial_size, uint32_t *pd) {
     current_pd = pd;
-    current_pt = pt;
     heap_head = (HeapBlock*)heap_start;
-    heap_end  = heap_start + heap_initial_size;
+    heap_end  = heap_start; // Start at the beginning to map correctly
+
+    // Map the initial heap area
+    uint32_t pages = (heap_initial_size + 0xFFF) / 0x1000;
+    for (uint32_t i = 0; i < pages; i++) {
+        int frame = allocPhysicalPage();
+        if (frame >= 0) {
+            mapPage(current_pd, heap_end, (uint32_t)frame * 0x1000, PAGE_PRESENT | PAGE_RW);
+            heap_end += 0x1000;
+        }
+    }
 
     heap_head->magic = HEAP_MAGIC;
-    heap_head->size  = heap_initial_size - sizeof(HeapBlock);
+    heap_head->size  = (pages * 0x1000) - sizeof(HeapBlock);
     heap_head->free  = 1;
     heap_head->next  = NULL;
     heap_head->prev  = NULL;

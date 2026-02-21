@@ -1,8 +1,9 @@
 #include "schedulers/priority.h"
 #include "utils/string.h"
 #include "schedulers/task.h"
+#include "memory/vmm.h"
 
-extern void contextSwitch(uint32_t **prev_esp_ptr, uint32_t *next_esp);
+extern void contextSwitch(uint32_t **prev_esp_ptr, uint32_t *next_esp, uint32_t next_pd_phys);
 
 extern uint32_t getCurrentesp();
 
@@ -14,6 +15,8 @@ void initPriority(Scheduler *scheduler) {
     memset(task, 0, sizeof(*task));
     task->state = TASK_RUNNING;
     task->priority = 0;
+    task->pageDirectory = scheduler->pageDirectory;
+    task->pageDirectoryPhys = scheduler->pageDirectoryPhys;
     task->kstack_top = (uint32_t*)getCurrentesp();
 }
 
@@ -54,7 +57,8 @@ void schedulePriority(Scheduler *scheduler) {
         
         uint32_t **prev_esp_ptr = &prev_task->kstack_top;
         uint32_t *next_esp = next_task->kstack_top;
-        contextSwitch(prev_esp_ptr, next_esp);
+        uint32_t next_pd_phys = next_task->pageDirectoryPhys;
+        contextSwitch(prev_esp_ptr, next_esp, next_pd_phys);
     }
 }
 
@@ -69,7 +73,8 @@ int addTaskPriority(Scheduler *scheduler, void (*func)(void)) {
     t->id = scheduler->task_count;
     t->state = TASK_RUNNABLE;
     t->priority = 1;
-    t->kstack = allocateStack(scheduler);
+    createTaskPageStructures(&(t->pageDirectory), &(t->pageDirectoryPhys));
+    t->kstack = allocateStack(t->pageDirectory, t->id);
     if (!t->kstack) return -1;
     uint32_t *top = (uint32_t*)(t->kstack + STACK_SIZE);
     *(--top) = (uint32_t)taskTrampoline;
@@ -84,8 +89,9 @@ int addTaskPriority(Scheduler *scheduler, void (*func)(void)) {
 
 void removeTaskPriority(Scheduler *scheduler, int task_id) {
     if (task_id >= 0 && task_id < scheduler->task_count) {
-        deallocateStack(scheduler, task_id);
-        scheduler->tasks[task_id].state = TASK_TERMINATED;
+        Task *t = &scheduler->tasks[task_id];
+        deallocateStack(t->pageDirectory, task_id);
+        t->state = TASK_TERMINATED;
     }
 }
 

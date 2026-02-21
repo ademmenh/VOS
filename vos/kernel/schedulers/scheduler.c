@@ -1,17 +1,17 @@
 #include "schedulers/scheduler.h"
 #include "schedulers/task.h"
+#include "memory/vmm.h"
 
-void initScheduler(Scheduler *sched, SchedulerStrategy *strategy, Task *tasks, int max_tasks, uint32_t *pageDirectory, uint32_t **pageTables, TSS *tss) {
-    sched->strategy = strategy;
-    sched->tasks = tasks;
-    sched->max_tasks = max_tasks;
-    sched->task_count = 1;
-    sched->current_idx = 0;
-    sched->pageDirectory = pageDirectory;
-    sched->pageTables = pageTables;
-    sched->tss = tss;
-    if (!strategy || !strategy->init) return;
-    strategy->init(sched);
+void initScheduler(Scheduler *scheduler, SchedulerStrategy *strategy, Task *tasks, int max_tasks, uint32_t *pageDirectory, TSS *tss) {
+    scheduler->strategy = strategy;
+    scheduler->tasks = tasks;
+    scheduler->max_tasks = max_tasks;
+    scheduler->task_count = 1; // Main task
+    scheduler->current_idx = 0;
+    scheduler->pageDirectory = pageDirectory;
+    scheduler->pageDirectoryPhys = virtualToPhysical((uint32_t)pageDirectory);
+    scheduler->tss = tss;
+    strategy->init(scheduler);
 }
 
 void schedule(Scheduler *scheduler) {

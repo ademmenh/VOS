@@ -23,11 +23,12 @@ struct Scheduler {
     int task_count;
     int current_idx;
     uint32_t *pageDirectory;
+    uint32_t pageDirectoryPhys;
     uint32_t **pageTables;
     TSS *tss;
 };
 
-void initScheduler(Scheduler *scheduler, SchedulerStrategy *strategy, Task *tasks, int max_tasks, uint32_t *pageDirectory, uint32_t **pageTables, TSS *tss);
+void initScheduler(Scheduler *scheduler, SchedulerStrategy *strategy, Task *tasks, int max_tasks, uint32_t *pageDirectory, TSS *tss);
 
 void schedule(Scheduler *scheduler);
 

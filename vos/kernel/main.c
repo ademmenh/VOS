@@ -45,10 +45,6 @@ SchedulerStrategy rr_strategy = {
 };
 
 extern uint32_t pageDirectory[PDE_COUNT];
-extern uint32_t kernelPageTable[PTE_COUNT];
-extern uint32_t kernelStackPageTable[PTE_COUNT];
-// This creates actual space in your kernel data section
-static uint32_t *pageTables[PDE_COUNT] __attribute__((aligned(4096)));
 
 VfsMount* vfs_root = NULL;
 
@@ -74,24 +70,24 @@ IRQHandler irq_routines[16] = {
 };
 
 void task1(void) {
-    char c1 = '1';
-    while (1) print(&c1);
-    // uint32_t *ptr = (uint32_t*)getCurrentesp();
-    // printf("ptr: %p\n", ptr);
+    // char c1 = '1';
+    // while (1) print(&c1);
+    uint32_t *ptr = (uint32_t*)getCurrentesp();
+    printf("ptr: %p\n", ptr);
 }
 
 void task2(void) {
-    char c2 = '2';
-    while (1) print(&c2);
-    // uint32_t *ptr = (uint32_t*)getCurrentesp();
-    // printf("ptr2: %p\n", ptr);
+    // char c2 = '2';
+    // while (1) print(&c2);
+    uint32_t *ptr = (uint32_t*)getCurrentesp();
+    printf("ptr2: %p\n", ptr);
 }
 
 void task3(void) {
-    char c3 = '3';
-    while (1) print(&c3);
-    // uint32_t *ptr = (uint32_t*)getCurrentesp();
-    // printf("ptr3: %p\n", ptr);
+    // char c3 = '3';
+    // while (1) print(&c3);
+    uint32_t *ptr = (uint32_t*)getCurrentesp();
+    printf("ptr3: %p\n", ptr);
 }
 
 void main () {
@@ -234,22 +230,18 @@ void main () {
     // printf("Total frames: %d\n", total_frames);
     // printf("total frammes Address: %p\n", &total_frames);
     initPmm(total_frames);
-    initVmm(pageDirectory, pageTables);
 
     // init Heap
-    // printf("kernel end: %p\n", (uint32_t)&KERNEL_END);
-    // printf("heap start: %p\n", (uint32_t)&HEAP_START);
-    // printf("sizeof(HeapBlock): %d\n", sizeof(HeapBlock));
-    initHeap((uint32_t)&HEAP_START, 0xFFFFFF, pageDirectory, pageTables);
-    void* ptr1 = kmalloc(0xFF);
-    void* ptr2 = kmalloc(0xFF);
-    void* ptr3 = kmalloc(0xFF);
-    printf("ptr1: %p\n", ptr1);
-    printf("ptr2: %p\n", ptr2);
-    printf("ptr3: %p\n", ptr3);
-    kfree(ptr1);
-    kfree(ptr2);
-    kfree(ptr3);
+    initHeap((uint32_t)&HEAP_START, 0xF000, pageDirectory);
+    // void* ptr1 = kmalloc(0x1000 * 1024);
+    // void* ptr2 = kmalloc(0xFF);
+    // void* ptr3 = kmalloc(0xFF);
+    // printf("ptr1: %p\n", ptr1);
+    // printf("ptr2: %p\n", ptr2);
+    // printf("ptr3: %p\n", ptr3);
+    // kfree(ptr1);
+    // kfree(ptr2);
+    // kfree(ptr3);
 
     // init VFS
     initVfs(&vfs_root);
@@ -286,9 +278,9 @@ void main () {
     // *q = 0;
     // printf("q: %p\n", q);
 
-    initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS, pageDirectory, pageTables, &tss);
-    // int t1 = addTask(&scheduler, task1);
-    // int t2 = addTask(&scheduler, task2);
-    // int t3 = addTask(&scheduler, task3);
+    initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS, pageDirectory, &tss);
+    int t1 = addTask(&scheduler, task1);
+    int t2 = addTask(&scheduler, task2);
+    int t3 = addTask(&scheduler, task3);
     while(1);
 }

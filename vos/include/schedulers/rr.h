@@ -13,7 +13,7 @@ int addTaskRR(Scheduler *scheduler, void (*func)(void));
 
 void removeTaskRR(Scheduler *scheduler, int task_id);
 
-extern void contextSwitch(uint32_t **prev_esp_ptr, uint32_t *next_esp);
+extern void contextSwitch(uint32_t **prev_esp_ptr, uint32_t *next_esp, uint32_t next_pd_phys);
 
 extern uint32_t getCurrentesp();
 

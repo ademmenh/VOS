@@ -19,7 +19,7 @@ extern KERNEL_END
 
 global start
 global pageDirectory
-global kernelPageTable
+global kernelPageTables
 global kernelStackPageTable
 
 section .multiboot
@@ -32,11 +32,10 @@ section .text
 
 start:
     cli
-    ; kernelPageTable 1:1 mapping
-    ; 1MB (BIOS) + 3MB (kernel)
-    mov edi, kernelPageTable - KERNEL_OFFSET
+    ; kernelPageTables mapping - 128MB (32 PDEs)
+    mov edi, kernelPageTables - KERNEL_OFFSET
     mov eax, PAGE_PRESENT | PAGE_WRITABLE
-    mov ecx, 1024
+    mov ecx, 1024 * 32
     .fillPT:
     mov [edi], eax
     add eax, 4096
@@ -54,12 +53,18 @@ start:
     dec ecx
     jnz .clearPD
 
-    ; PDE 0 mapping - identity mapping
-    ; PDE 768 mapping - higher-half kernel to 0xC0000000
-    mov eax, kernelPageTable - KERNEL_OFFSET
+    ; Map 32 PDEs for identity mapping and higher-half
+    mov edi, pageDirectory - KERNEL_OFFSET
+    mov eax, kernelPageTables - KERNEL_OFFSET
     or  eax, PAGE_PRESENT | PAGE_WRITABLE
-    mov [pageDirectory - KERNEL_OFFSET + 0*4], eax
-    mov [pageDirectory - KERNEL_OFFSET + 768*4], eax
+    mov ecx, 32
+    .fillPDLinks:
+    mov [edi], eax                ; Identity map
+    mov [edi + 768*4], eax        ; Higher half kernel
+    add eax, 4096
+    add edi, 4
+    dec ecx
+    jnz .fillPDLinks
 
     ; clear kernelStackPageTable
     mov edi, kernelStackPageTable - KERNEL_OFFSET
@@ -72,10 +77,8 @@ start:
     jnz .clearKernelStackPT
 
     ; map kernelStackPageTable from the KERNEL_END
-    ; PTE[1020-1023] mapping - kernelStackPageTable
     mov edi, (kernelStackPageTable - KERNEL_OFFSET) + 1020*4
     mov eax, KERNEL_END - KERNEL_OFFSET
-    ; Align to next 4KB 
     add eax, 4095
     and eax, 0xFFFFF000
     or eax, PAGE_PRESENT | PAGE_WRITABLE
@@ -87,8 +90,13 @@ start:
     dec ecx
     jnz .mapKernelStack
 
-    ; PDE[1023] mapping - kernelStackPageTable
+    ; PDE[1022] mapping - kernelStackPageTable (RELOCATED)
     mov eax, kernelStackPageTable - KERNEL_OFFSET
+    or  eax, PAGE_PRESENT | PAGE_WRITABLE
+    mov [pageDirectory - KERNEL_OFFSET + 1022*4], eax
+
+    ; PDE[1023] mapping - RECURSIVE PAGING!
+    mov eax, pageDirectory - KERNEL_OFFSET
     or  eax, PAGE_PRESENT | PAGE_WRITABLE
     mov [pageDirectory - KERNEL_OFFSET + 1023*4], eax
 
@@ -108,12 +116,14 @@ start:
 
 higherHalfEntry:
     ; remove identity mapping
-    mov dword [pageDirectory + 0*4], 0
-    mov eax, pageDirectory - KERNEL_OFFSET
-    mov cr3, eax
+    mov edi, pageDirectory
+    xor eax, eax
+    mov ecx, 32
+    rep stosd
 
-    ; set stack at top of 4GB
-    mov esp, 0xFFFFFFFF
+    ; New stack pointer (Top of PDE 1022 area)
+    ; PDE 1022 addresses: 0xFF800000 to 0xFFBFFFFF
+    mov esp, 0xFFBFFFFC
     call main
     cli
 
@@ -127,8 +137,8 @@ align 4096
 pageDirectory:
     resb 4096
 
-kernelPageTable:
-    resb 4096
+kernelPageTables:
+    resb 4096 * 32
 
 kernelStackPageTable:
     resb 4096

@@ -25,3 +25,8 @@ global getCR2
 getCR2:
     mov eax, cr2
     ret
+
+global getCR3
+getCR3:
+    mov eax, cr3
+    ret
