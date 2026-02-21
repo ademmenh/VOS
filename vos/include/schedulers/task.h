@@ -2,11 +2,12 @@
 #define TASK_H
 
 #include <stdint.h>
+#include "routines/idt.h"
 
 typedef struct Scheduler Scheduler;
 
-#define KSTACK_BASE 0x20000000
-#define KSTACK_SIZE 16384
+#define STACK_SIZE (4096)
+#define USER_STACK_BASE (0xC0000000 - STACK_SIZE)
 
 typedef enum { 
     TASK_RUNNABLE=0,
@@ -16,12 +17,7 @@ typedef enum {
     TASK_TERMINATED=4
 } TaskState;
 
-typedef struct {
-    uint32_t edi, esi, ebp, esp_dummy, ebx, edx, ecx, eax;
-    uint32_t eip;
-    uint32_t cs;
-    uint32_t eflags;
-} Regs;
+// Redundant Regs struct removed, using InterruptRegisters from idt.h
 
 typedef struct {
     int id;
@@ -30,10 +26,10 @@ typedef struct {
     uint32_t *pageDirectory;
     uint8_t *kstack;
     uint32_t *kstack_top;
-    Regs regs;
+    InterruptRegisters regs;
 } Task;
 
-void *allocateKStack(Scheduler *scheduler);
-void deallocateKStack(Scheduler *scheduler, int task_id);
+void *allocateStack(Scheduler *scheduler);
+void deallocateStack(Scheduler *scheduler, int task_id);
 
 #endif

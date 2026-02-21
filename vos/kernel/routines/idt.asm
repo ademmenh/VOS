@@ -9,29 +9,25 @@ extern handleIRQ
 %macro ISR_NOERRCODE 1
     global isr%1
     isr%1:
-        CLI
-        PUSH LONG 0
-        PUSH LONG %1
-        JMP dispatchISR
+        push 0
+        push %1
+        jmp commonInterruptHandler
 %endmacro
 
 %macro ISR_ERRCODE 1
     global isr%1
     isr%1:
-        CLI
-        PUSH LONG %1
-        JMP dispatchISR
+        push %1
+        jmp commonInterruptHandler
 %endmacro
 
 %macro IRQ 2
     global irq%1
     irq%1:
-        CLI
-        PUSH LONG 0
-        PUSH LONG %2
-        JMP dispatchIRQ
+        push 0
+        push %2
+        jmp commonInterruptHandler
 %endmacro
-
 
 ISR_NOERRCODE 0
 ISR_NOERRCODE 1
@@ -84,85 +80,36 @@ IRQ 13, 45
 IRQ 14, 46
 IRQ 15, 47
 
+extern handleInterrupt
+
+commonInterruptHandler:
+    pushad
+
+    push ds
+    push es
+    push fs
+    push gs
+
+    mov ax, 0x10
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    push esp
+    call handleInterrupt
+    add esp, 4
+
+    pop gs
+    pop fs
+    pop es
+    pop ds
+
+    popad
+    add esp, 8
+    iret
 
 loadIDT:
     mov eax, [esp+4]
     lidt [eax]
     ret
-
-handleISR:
-    push ebp
-    mov ebp, esp
-    push ebx
-
-    mov ebx, [eax + 48]
-
-    cmp ebx, 32
-    jae .end
-
-    cli
-
-    .halt_loop:
-        hlt
-        jmp .halt_loop
-
-    .end:
-        pop ebx
-        pop ebp
-        ret
-
-dispatchISR:
-    pusha
-    mov eax, ds
-    push eax
-    mov eax, cr2
-    push eax
-
-    mov ax, 0x10
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-
-    push esp
-    call handleISR 
-
-    add esp, 8
-    pop ebx
-    mov ds, bx
-    mov es, bx
-    mov fs, bx
-    mov gs, bx
-
-    popa
-    add esp, 8
-    ; sti 
-    iret
-
-dispatchIRQ:
-    pusha
-    mov eax, ds
-    push eax
-    mov eax, cr2
-    push eax
-
-    mov ax, 0x10
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-
-    push esp
-    call handleIRQ
-
-    add esp, 8
-    pop ebx
-    mov ds, bx
-    mov es, bx
-    mov fs, bx
-    mov gs, bx
-
-    popa
-    add esp, 8
-    ; sti 
-    iret

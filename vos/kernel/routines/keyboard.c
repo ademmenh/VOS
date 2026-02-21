@@ -44,7 +44,6 @@ void handleKeyboard(InterruptRegisters *regs) {
     // Shift keys
     if (key == 0x2A || key == 0x36) {
         keyboard->shiftPressed = !released;
-        outb(0x20, 0x20);   // EOI
         return;
     }
 
@@ -54,7 +53,5 @@ void handleKeyboard(InterruptRegisters *regs) {
         if (asciiChar)
             putc(asciiChar);
     }
-
-    outb(0x20, 0x20);   // EOI
 }
 

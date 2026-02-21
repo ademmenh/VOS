@@ -20,3 +20,8 @@ invalidatePage:
     mov eax, [esp + 4]
     invlpg [eax]
     ret
+
+global getCR2
+getCR2:
+    mov eax, cr2
+    ret

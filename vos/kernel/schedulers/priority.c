@@ -69,9 +69,9 @@ int addTaskPriority(Scheduler *scheduler, void (*func)(void)) {
     t->id = scheduler->task_count;
     t->state = TASK_RUNNABLE;
     t->priority = 1;
-    t->kstack = allocateKStack(scheduler);
+    t->kstack = allocateStack(scheduler);
     if (!t->kstack) return -1;
-    uint32_t *top = (uint32_t*)(t->kstack + KSTACK_SIZE);
+    uint32_t *top = (uint32_t*)(t->kstack + STACK_SIZE);
     *(--top) = (uint32_t)taskTrampoline;
     *(--top) = 0;
     *(--top) = 0;
@@ -84,7 +84,7 @@ int addTaskPriority(Scheduler *scheduler, void (*func)(void)) {
 
 void removeTaskPriority(Scheduler *scheduler, int task_id) {
     if (task_id >= 0 && task_id < scheduler->task_count) {
-        deallocateKStack(scheduler, task_id);
+        deallocateStack(scheduler, task_id);
         scheduler->tasks[task_id].state = TASK_TERMINATED;
     }
 }

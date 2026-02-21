@@ -16,21 +16,13 @@ userTrampoline:
     mov gs, ax
     iret
 
-
 contextSwitch:
-    push ebp
-    push ebx
-    push esi
-    push edi
-    ; save esp 
-    mov eax, [esp + 20]
-    mov [eax], esp
-    ; get new esp
-    mov eax, [esp + 24]
-    mov esp, eax
+    mov eax, [esp + 4]
+    mov edx, [esp + 8]
+    pusha
 
-    pop edi
-    pop esi
-    pop ebx
-    pop ebp
+    mov [eax], esp
+    mov esp, edx
+
+    popa
     ret

@@ -3,32 +3,21 @@
 #include "memory/vmm.h"
 #include "schedulers/task.h"
 #include "schedulers/scheduler.h"
+#include "utils/vga.h"
 
-void *allocateKStack(Scheduler *scheduler) {
+void *allocateStack(Scheduler *scheduler) {
     if (scheduler->task_count >= scheduler->max_tasks) return NULL;
-    // Use a step that includes a guard page (PAGE_SIZE gap)
-    uint32_t total_step = KSTACK_SIZE + PAGE_SIZE;
-    uint32_t virt_base = KSTACK_BASE + (scheduler->task_count * total_step);
-    uint32_t pages_needed = KSTACK_SIZE / PAGE_SIZE;
-    
-    for (uint32_t i = 0; i < pages_needed; i++) {
-        int frame = allocPhysicalPage();
-        if (frame < 0) return NULL;
-        uint32_t phys = frame * PAGE_SIZE;
-        // Map pages starting AFTER the guard page
-        uint32_t virt = virt_base + (i * PAGE_SIZE);
-        mapVmm(scheduler->pageDirectory, scheduler->pageTables, virt, phys, PAGE_RW);
-    }
-    return (void*)virt_base;
+    int frame = allocPhysicalPage();
+    if (frame < 0) return NULL;
+    uint32_t phys = frame * PAGE_SIZE;
+    uint32_t virt = USER_STACK_BASE - (scheduler->task_count * STACK_SIZE);
+    printf("virt: %p\n", virt);
+    mapPage(scheduler->pageDirectory, scheduler->pageTables, virt, phys, PAGE_RW);
+    return (void*)virt;
 }
 
-void deallocateKStack(Scheduler *scheduler, int task_id) {
-    uint32_t total_step = KSTACK_SIZE + PAGE_SIZE;
-    uint32_t virt_base = KSTACK_BASE + (task_id * total_step);
-    uint32_t pages_needed = KSTACK_SIZE / PAGE_SIZE;
-
-    for (uint32_t i = 0; i < pages_needed; i++) {
-        uint32_t virt = virt_base + (i * PAGE_SIZE);
-        unmapVmm(scheduler->pageDirectory, scheduler->pageTables, virt);
-    }
+void deallocateStack(Scheduler *scheduler, int task_id) {
+    uint32_t virt = USER_STACK_BASE - (task_id * STACK_SIZE);
+    printf("unmap virt: %p\n", virt);
+    unmapPage(scheduler->pageDirectory, scheduler->pageTables, virt);
 }

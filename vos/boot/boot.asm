@@ -33,6 +33,7 @@ section .text
 start:
     cli
     ; kernelPageTable 1:1 mapping
+    ; 1MB (BIOS) + 3MB (kernel)
     mov edi, kernelPageTable - KERNEL_OFFSET
     mov eax, PAGE_PRESENT | PAGE_WRITABLE
     mov ecx, 1024
@@ -71,6 +72,7 @@ start:
     jnz .clearKernelStackPT
 
     ; map kernelStackPageTable from the KERNEL_END
+    ; PTE[1020-1023] mapping - kernelStackPageTable
     mov edi, (kernelStackPageTable - KERNEL_OFFSET) + 1020*4
     mov eax, KERNEL_END - KERNEL_OFFSET
     ; Align to next 4KB 

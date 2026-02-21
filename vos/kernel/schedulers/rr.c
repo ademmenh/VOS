@@ -41,14 +41,18 @@ int addTaskRR(Scheduler *scheduler, void (*func)(void)) {
     t->id = scheduler->task_count;
     t->state = TASK_RUNNABLE;
     t->pageDirectory = scheduler->pageDirectory;
-    t->kstack = allocateKStack(scheduler);
+    t->kstack = allocateStack(scheduler);
     if (!t->kstack) return -1;
-    uint32_t *top = (uint32_t*)(t->kstack + KSTACK_SIZE);
+    uint32_t *top = (uint32_t*)(t->kstack + STACK_SIZE);
     *(--top) = (uint32_t)taskTrampoline;
-    *(--top) = 0;
-    *(--top) = 0;
-    *(--top) = 0;
-    *(--top) = (uint32_t)func;
+    *(--top) = 0;                  // EAX
+    *(--top) = 0;                  // ECX
+    *(--top) = 0;                  // EDX
+    *(--top) = 0;                  // EBX
+    *(--top) = 0;                  // ESP (ignored by popa)
+    *(--top) = 0;                  // EBP
+    *(--top) = 0;                  // ESI
+    *(--top) = (uint32_t)func;     // EDI (trampoline calls EDI)
     t->kstack_top = top;
     scheduler->task_count++;
     return t->id;
@@ -56,7 +60,7 @@ int addTaskRR(Scheduler *scheduler, void (*func)(void)) {
 
 void removeTaskRR(Scheduler *scheduler, int task_id) {
     if (task_id >= 0 && task_id < scheduler->task_count) {
-        deallocateKStack(scheduler, task_id);
+        deallocateStack(scheduler, task_id);
         scheduler->tasks[task_id].state = TASK_TERMINATED;
     }
 }

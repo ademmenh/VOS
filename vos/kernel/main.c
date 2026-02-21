@@ -17,6 +17,8 @@
 #include "storage/ramfs.h"
 #include "utils/string.h"
 
+extern uint32_t getCurrentesp();
+
 extern uint32_t KERNEL_START;
 extern uint32_t KERNEL_END;
 extern uint32_t HEAP_START;
@@ -45,7 +47,8 @@ SchedulerStrategy rr_strategy = {
 extern uint32_t pageDirectory[PDE_COUNT];
 extern uint32_t kernelPageTable[PTE_COUNT];
 extern uint32_t kernelStackPageTable[PTE_COUNT];
-static uint32_t *pageTables[PDE_COUNT];
+// This creates actual space in your kernel data section
+static uint32_t *pageTables[PDE_COUNT] __attribute__((aligned(4096)));
 
 VfsMount* vfs_root = NULL;
 
@@ -70,19 +73,25 @@ IRQHandler irq_routines[16] = {
     0, 
 };
 
-
 void task1(void) {
-    char c = '1';
-    while (1) print(&c);
+    char c1 = '1';
+    while (1) print(&c1);
+    // uint32_t *ptr = (uint32_t*)getCurrentesp();
+    // printf("ptr: %p\n", ptr);
 }
 
 void task2(void) {
-    char c = '-';
-    while (1) print(&c);
+    char c2 = '2';
+    while (1) print(&c2);
+    // uint32_t *ptr = (uint32_t*)getCurrentesp();
+    // printf("ptr2: %p\n", ptr);
 }
 
 void task3(void) {
-    while (1) print("7");
+    char c3 = '3';
+    while (1) print(&c3);
+    // uint32_t *ptr = (uint32_t*)getCurrentesp();
+    // printf("ptr3: %p\n", ptr);
 }
 
 void main () {
@@ -203,14 +212,20 @@ void main () {
     // printf("pageTable[1021]: %p\n", pageTable[1021]);
     // printf("pageTable[1022]: %p\n", pageTable[1022]);
     // printf("pageTable[1023]: %p\n", pageTable[1023]);
-    // printf("stackPageTable[1020]: %p\n", stackPageTable[1020]);
-    // printf("stackPageTable[1021]: %p\n", stackPageTable[1021]);
-    // printf("stackPageTable[1022]: %p\n", stackPageTable[1022]);
-    // printf("stackPageTable[1023]: %p\n", stackPageTable[1023]);
+    
+    // printf("stackPageTable[1016]: %p\n", kernelStackPageTable[1016]);
+    // printf("stackPageTable[1017]: %p\n", kernelStackPageTable[1017]);
+    // printf("stackPageTable[1018]: %p\n", kernelStackPageTable[1018]);
+    // printf("stackPageTable[1019]: %p\n", kernelStackPageTable[1019]);
+    // printf("stackPageTable[1020]: %p\n", kernelStackPageTable[1020]);
+    // printf("stackPageTable[1021]: %p\n", kernelStackPageTable[1021]);
+    // printf("stackPageTable[1022]: %p\n", kernelStackPageTable[1022]);
+    // printf("stackPageTable[1023]: %p\n", kernelStackPageTable[1023]);
     // printf("kernel end: %p\n", (uint32_t)&KERNEL_END);
     // printf("kernel offset: %p\n", (uint32_t)KERNEL_OFFSET);
     // printf("kernel size: %d\n", (uint32_t)&KERNEL_END - (uint32_t)KERNEL_OFFSET);
     // printf("kernel frames: %d\n", (uint32_t)KERNEL_FRAMES);
+    // kernel stack pointer
 
     // init PMM, VMM
     uint32_t mem_size = 0xFFFFFFFF;
@@ -226,15 +241,15 @@ void main () {
     // printf("heap start: %p\n", (uint32_t)&HEAP_START);
     // printf("sizeof(HeapBlock): %d\n", sizeof(HeapBlock));
     initHeap((uint32_t)&HEAP_START, 0xFFFFFF, pageDirectory, pageTables);
-    // void* ptr1 = kmalloc(0xFF);
-    // void* ptr2 = kmalloc(0xFF);
-    // void* ptr3 = kmalloc(0xFF);
-    // printf("ptr1: %p\n", ptr1);
-    // printf("ptr2: %p\n", ptr2);
-    // printf("ptr3: %p\n", ptr3);
-    // kfree(ptr1);
-    // kfree(ptr2);
-    // kfree(ptr3);
+    void* ptr1 = kmalloc(0xFF);
+    void* ptr2 = kmalloc(0xFF);
+    void* ptr3 = kmalloc(0xFF);
+    printf("ptr1: %p\n", ptr1);
+    printf("ptr2: %p\n", ptr2);
+    printf("ptr3: %p\n", ptr3);
+    kfree(ptr1);
+    kfree(ptr2);
+    kfree(ptr3);
 
     // init VFS
     initVfs(&vfs_root);
@@ -242,27 +257,34 @@ void main () {
     VfsNode* ramfs_root = getRamfsRootNode();
     mountVfsRoot(&vfs_root, ramfs_root);
     // Testing VFS
-    VfsNode* dev  = createVfsNode(ramfs_root, "dev", VFS_TYPE_DIRECTORY);
-    // Create /hello.txt
-    VfsNode* file = createVfsNode(ramfs_root, "hello.txt", VFS_TYPE_FILE);
-    char msg[] = "Hello from ramfs!";
-    char msg2[] = "ramfs2!";
-    writeVfsNode(file, 0, sizeof(msg), (uint8_t*)msg);
-    char read_msg[sizeof(msg)];
-    readVfsNode(file, 0, sizeof(msg), (uint8_t*)read_msg);
-    printf("read_msg: %s\n", read_msg);
-    writeVfsNode(file, 0, sizeof(msg2), (uint8_t*)msg2);
-    char read_msg2[sizeof(msg2)];
-    readVfsNode(file, 0, sizeof(msg2), (uint8_t*)read_msg2);
-    printf("read_msg2: %s\n", read_msg2);
+    // VfsNode* dev  = createVfsNode(ramfs_root, "dev", VFS_TYPE_DIRECTORY);
+    // // Create /hello.txt
+    // VfsNode* file = createVfsNode(ramfs_root, "hello.txt", VFS_TYPE_FILE);
+    // char msg[] = "Hello from ramfs!";
+    // char msg2[] = "ramfs2!";
+    // writeVfsNode(file, 0, sizeof(msg), (uint8_t*)msg);
+    // char read_msg[sizeof(msg)];
+    // readVfsNode(file, 0, sizeof(msg), (uint8_t*)read_msg);
+    // printf("read_msg: %s\n", read_msg);
+    // writeVfsNode(file, 0, sizeof(msg2), (uint8_t*)msg2);
+    // char read_msg2[sizeof(msg2)];
+    // readVfsNode(file, 0, sizeof(msg2), (uint8_t*)read_msg2);
+    // printf("read_msg2: %s\n", read_msg2);
 
-    uint32_t addr = 0;
-    printf("addr: %p\n", &addr);
-    uint32_t arr [1024*2];
-    printf("arr: %p\n", &arr[4]);
-    uint32_t var = 0x12345678;
-    printf("var: %p\n", &var);
-    
+    // uint32_t addr = 0;
+    // printf("addr: %p\n", &addr);
+    // uint32_t arr [100];
+    // printf("arr: %p\n", &arr[4]);
+    // uint32_t var = 0x12345678;
+    // printf("var: %p\n", &var);
+
+    // Test Page Fault
+    // uint32_t *p = (uint32_t*)0xFFFFFFFC;
+    // *p = 0;
+    // printf("p: %p\n", p);
+    // uint32_t *q = (uint32_t*)0xFFFFFFFF;
+    // *q = 0;
+    // printf("q: %p\n", q);
 
     initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS, pageDirectory, pageTables, &tss);
     // int t1 = addTask(&scheduler, task1);

@@ -26,7 +26,7 @@ void mapPage(uint32_t *pageDirectory, uint32_t **pageTables, uint32_t virt, uint
         pageDirectory[pd_index] = pt_phys | PAGE_PRESENT | PAGE_RW;
     }
 
-    // printf("Mapping page %d:%d -> %d:%d\n", pd_index, pt_index, phys >> 12, phys & 0xFFF);
+    printf("Mapping page %d:%d -> %d:%d\n", pd_index, pt_index, phys >> 12, phys & 0xFFF);
     pageTables[pd_index][pt_index] = (phys & 0xFFFFF000) | flags | PAGE_PRESENT;
     invalidatePage(virt);
 }

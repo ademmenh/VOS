@@ -15,6 +15,7 @@ void unmapPage(uint32_t *pageDirectory, uint32_t **pageTables, uint32_t virt);
 
 extern void enablePaging(uint32_t *pageDirectory_phys);
 extern void invalidatePage(uint32_t virt);
+extern uint32_t getCR2(void);
 
 static inline uint32_t virtualToPhysical(uint32_t v);
 static inline uint32_t physicalToVirtual(uint32_t p);
