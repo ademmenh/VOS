@@ -68,6 +68,7 @@ int addTaskPriority(Scheduler *scheduler, void (*func)(void)) {
     t->id = scheduler->task_count;
     t->state = TASK_RUNNABLE;
     t->priority = 1;
+    initFDT(t->fd_table);
     createTaskPageStructures(&(t->pageDirectory), &(t->pageDirectoryPhys));
     void *user_eip = loadUserCode(t->pageDirectory, (void*)func, USER_CODE_SIZE);
     if (!user_eip) return -1;

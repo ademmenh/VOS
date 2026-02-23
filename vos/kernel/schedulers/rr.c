@@ -48,6 +48,7 @@ int addTaskRR(Scheduler *scheduler, void (*func)(void)) {
     memset(t, 0, sizeof(Task));
     t->id = scheduler->task_count;
     t->state = TASK_RUNNABLE;
+    initFDT(t->fd_table);
     createTaskPageStructures(&(t->pageDirectory), &(t->pageDirectoryPhys));
     void *user_eip = loadUserCode(t->pageDirectory, (void*)func, USER_CODE_SIZE);
     if (!user_eip) return -1;

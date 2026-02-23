@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include "routines/idt.h"
+#include "storage/vfs.h"
+#include "schedulers/fdt.h"
 
 typedef struct Scheduler Scheduler;
 
@@ -35,6 +37,8 @@ typedef struct Task {
     uint32_t  kstack_top;          // what ESP will be set to
     uint32_t  ustack_top;          // initial user ESP
     InterruptRegisters regs;
+
+    FileDescriptor fd_table[MAX_FILE_DESCRIPTORS];
 } Task;
 
 void *allocateStack(uint32_t *pd, uint32_t virt_start, uint32_t size, uint32_t flags, uint32_t *phys_top_out);
