@@ -10,6 +10,7 @@
 #define PAGE_USER      (1 << 2)
 
 #define PAGE_SIZE      4096
+#define PAGE_ALIGN_4K(x) ((x) & 0xFFFFF000)
 #define PDE_COUNT      1024
 #define PTE_COUNT      1024
 

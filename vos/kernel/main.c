@@ -18,6 +18,7 @@
 #include "utils/string.h"
 
 extern uint32_t getCurrentesp();
+extern uint32_t getCR3();
 
 extern uint32_t KERNEL_START;
 extern uint32_t KERNEL_END;
@@ -69,25 +70,21 @@ IRQHandler irq_routines[16] = {
     0, 
 };
 
+// User-space task functions — must be self-contained (no kernel calls).
+// They run in Ring 3 with code copied to user pages at 0x00001000.
 void task1(void) {
-    // char c1 = '1';
-    // while (1) print(&c1);
-    uint32_t *ptr = (uint32_t*)getCurrentesp();
-    printf("ptr: %p\n", ptr);
+    volatile int x = 0;
+    while (1) { x++; }
 }
 
 void task2(void) {
-    // char c2 = '2';
-    // while (1) print(&c2);
-    uint32_t *ptr = (uint32_t*)getCurrentesp();
-    printf("ptr2: %p\n", ptr);
+    volatile int y = 0;
+    while (1) { y++; }
 }
 
 void task3(void) {
-    // char c3 = '3';
-    // while (1) print(&c3);
-    uint32_t *ptr = (uint32_t*)getCurrentesp();
-    printf("ptr3: %p\n", ptr);
+    volatile int z = 0;
+    while (1) { z++; }
 }
 
 void main () {
@@ -232,7 +229,7 @@ void main () {
     initPmm(total_frames);
 
     // init Heap
-    initHeap((uint32_t)&HEAP_START, 0xF000, pageDirectory);
+    initHeap((uint32_t)&HEAP_START, 0x4000, pageDirectory);
     // void* ptr1 = kmalloc(0x1000 * 1024);
     // void* ptr2 = kmalloc(0xFF);
     // void* ptr3 = kmalloc(0xFF);

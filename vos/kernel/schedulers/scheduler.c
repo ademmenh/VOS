@@ -1,6 +1,7 @@
 #include "schedulers/scheduler.h"
 #include "schedulers/task.h"
 #include "memory/vmm.h"
+#include "utils/vga.h"
 
 void initScheduler(Scheduler *scheduler, SchedulerStrategy *strategy, Task *tasks, int max_tasks, uint32_t *pageDirectory, TSS *tss) {
     scheduler->strategy = strategy;
@@ -24,6 +25,7 @@ void yield(Scheduler *scheduler) {
 }
 
 int addTask(Scheduler *scheduler, void (*func)(void)) {
+    printf("Adding task\n");
     if (scheduler->strategy && scheduler->strategy->addTask) return scheduler->strategy->addTask(scheduler, func);
     return -1;
 }

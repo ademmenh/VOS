@@ -7,7 +7,7 @@ extern void contextSwitch(uint32_t **prev_esp_ptr, uint32_t *next_esp, uint32_t 
 
 extern uint32_t getCurrentesp();
 
-extern void taskTrampoline();
+extern void userTrampoline();
 
 void initPriority(Scheduler *scheduler) {
     Task *task = scheduler->tasks;
@@ -17,7 +17,7 @@ void initPriority(Scheduler *scheduler) {
     task->priority = 0;
     task->pageDirectory = scheduler->pageDirectory;
     task->pageDirectoryPhys = scheduler->pageDirectoryPhys;
-    task->kstack_top = (uint32_t*)getCurrentesp();
+    task->kstack_top = getCurrentesp();
 }
 
 void schedulePriority(Scheduler *scheduler) {
@@ -34,11 +34,9 @@ void schedulePriority(Scheduler *scheduler) {
     if (max_prio == -1) return;
     int start_idx = (scheduler->current_idx + 1) % scheduler->task_count;
     int best_idx = -1;
-
     for (int i = 0; i < scheduler->task_count; ++i) {
         int idx = (start_idx + i) % scheduler->task_count;
         Task *t = &scheduler->tasks[idx];
-        
         if ((t->state == TASK_RUNNABLE || t->state == TASK_RUNNING) && t->priority == max_prio) {
             best_idx = idx;
             break;
@@ -48,17 +46,14 @@ void schedulePriority(Scheduler *scheduler) {
     if (best_idx != -1 && best_idx != scheduler->current_idx) {
         Task *prev_task = &scheduler->tasks[scheduler->current_idx];
         Task *next_task = &scheduler->tasks[best_idx];
-        
-        if (prev_task->state == TASK_RUNNING) {
-            prev_task->state = TASK_RUNNABLE;
-        }
+        if (prev_task->state == TASK_RUNNING) prev_task->state = TASK_RUNNABLE;
         next_task->state = TASK_RUNNING;
         scheduler->current_idx = best_idx;
-        
-        uint32_t **prev_esp_ptr = &prev_task->kstack_top;
-        uint32_t *next_esp = next_task->kstack_top;
+        uint32_t *prev_esp_ptr = &prev_task->kstack_top;
+        uint32_t *next_esp = (uint32_t*)next_task->kstack_top;
         uint32_t next_pd_phys = next_task->pageDirectoryPhys;
-        contextSwitch(prev_esp_ptr, next_esp, next_pd_phys);
+        scheduler->tss->esp0 = next_task->kstack_top;
+        contextSwitch((uint32_t**)prev_esp_ptr, next_esp, next_pd_phys);
     }
 }
 
@@ -74,15 +69,34 @@ int addTaskPriority(Scheduler *scheduler, void (*func)(void)) {
     t->state = TASK_RUNNABLE;
     t->priority = 1;
     createTaskPageStructures(&(t->pageDirectory), &(t->pageDirectoryPhys));
-    t->kstack = allocateStack(t->pageDirectory, t->id);
-    if (!t->kstack) return -1;
-    uint32_t *top = (uint32_t*)(t->kstack + STACK_SIZE);
-    *(--top) = (uint32_t)taskTrampoline;
-    *(--top) = 0;
-    *(--top) = 0;
-    *(--top) = 0;
-    *(--top) = (uint32_t)func;
-    t->kstack_top = top;
+    void *user_eip = loadUserCode(t->pageDirectory, (void*)func, USER_CODE_SIZE);
+    if (!user_eip) return -1;
+    uint32_t phys_top;
+    if (!allocateStack(t->pageDirectory, KERNEL_STACK_PAGE, KSTACK_SIZE, PAGE_RW, &phys_top)) return -1;
+    uint32_t user_phys_top;
+    if (!allocateStack(t->pageDirectory, 0, STACK_SIZE, PAGE_RW | PAGE_USER, &user_phys_top)) return -1;
+    t->ustack_top = user_phys_top;
+    uint32_t stack_base_phys = t->ustack_top - STACK_SIZE;
+    for (uint32_t i = 0; i < STACK_SIZE; i += PAGE_SIZE) {
+        mapPage(t->pageDirectory, stack_base_phys + i, stack_base_phys + i, PAGE_RW | PAGE_USER);
+    }
+    uint32_t *kernel_top = (uint32_t*)physicalToVirtual(phys_top);
+    *(--kernel_top) = 0x23;                                     // SS  (User Data Segment)
+    *(--kernel_top) = t->ustack_top;                            // ESP (User Stack Top - PHYSICAL)
+    *(--kernel_top) = 0x202;                                    // EFLAGS (IF=1)
+    *(--kernel_top) = 0x1B;                                     // CS  (User Code Segment)
+    *(--kernel_top) = (uint32_t)user_eip;                       // EIP (user-space code)
+    *(--kernel_top) = (uint32_t)userTrampoline; // EIP for ret
+    *(--kernel_top) = 0;                        // EAX
+    *(--kernel_top) = 0;                        // ECX
+    *(--kernel_top) = 0;                        // EDX
+    *(--kernel_top) = 0;                        // EBX
+    *(--kernel_top) = 0;                        // ESP (ignored by popa)
+    *(--kernel_top) = 0;                        // EBP
+    *(--kernel_top) = 0;                        // ESI
+    *(--kernel_top) = 0;                        // EDI
+    uint32_t bytes_pushed = physicalToVirtual(phys_top) - (uint32_t)kernel_top;
+    t->kstack_top = (KERNEL_STACK_PAGE + KSTACK_SIZE - bytes_pushed);
     scheduler->task_count++;
     return t->id;
 }
@@ -90,7 +104,8 @@ int addTaskPriority(Scheduler *scheduler, void (*func)(void)) {
 void removeTaskPriority(Scheduler *scheduler, int task_id) {
     if (task_id >= 0 && task_id < scheduler->task_count) {
         Task *t = &scheduler->tasks[task_id];
-        deallocateStack(t->pageDirectory, task_id);
+        deallocateStack(t->pageDirectory, KERNEL_STACK_PAGE, KSTACK_SIZE);
+        deallocateStack(t->pageDirectory, t->ustack_top - STACK_SIZE, STACK_SIZE);
         t->state = TASK_TERMINATED;
     }
 }

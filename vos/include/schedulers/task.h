@@ -6,8 +6,16 @@
 
 typedef struct Scheduler Scheduler;
 
-#define STACK_SIZE (4096)
-#define USER_STACK_BASE (0xC0000000 - STACK_SIZE)
+#define USER_CODE_PAGE  (0x00001000)
+#define USER_CODE_SIZE  (PAGE_SIZE)
+
+#define STACK_SIZE (1024 * 4)
+// pde[767] -> pte[1023]
+#define USER_STACK_PAGE (0xC0000000 - PAGE_SIZE)
+
+#define KSTACK_SIZE (1024 * 4)
+// pde[1022] -> pte[1023]
+#define KERNEL_STACK_PAGE (0xFFC00000 - PAGE_SIZE)
 
 typedef enum { 
     TASK_RUNNABLE=0,
@@ -17,20 +25,20 @@ typedef enum {
     TASK_TERMINATED=4
 } TaskState;
 
-// Redundant Regs struct removed, using InterruptRegisters from idt.h
-
-typedef struct {
+typedef struct Task {
     int id;
     TaskState state;
     int priority;
-    uint32_t *pageDirectory;
-    uint32_t pageDirectoryPhys;
-    uint8_t *kstack;
-    uint32_t *kstack_top;
+
+    uint32_t *pageDirectory;       // virtual (recursive-mapped)
+    uint32_t  pageDirectoryPhys;   // for CR3
+    uint32_t  kstack_top;          // what ESP will be set to
+    uint32_t  ustack_top;          // initial user ESP
     InterruptRegisters regs;
 } Task;
 
-void *allocateStack(uint32_t *pd, int task_id);
-void deallocateStack(uint32_t *pd, int task_id);
+void *allocateStack(uint32_t *pd, uint32_t virt_start, uint32_t size, uint32_t flags, uint32_t *phys_top_out);
+void deallocateStack(uint32_t *pd, uint32_t virt_start, uint32_t size);
+void *loadUserCode(uint32_t *pd, void *func, uint32_t size);
 
 #endif
