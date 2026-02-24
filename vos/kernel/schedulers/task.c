@@ -21,8 +21,7 @@ void *allocateStack(uint32_t *pd, uint32_t virt_start, uint32_t size, uint32_t f
         // Map into the task's PD (using recursive scratchpad if not current)
         mapPage(pd, virt, phys, flags);
         last_phys = phys;
-        printf("phys: %x\n", phys);
-        printf("Mapped stack page %d:%d -> %d:%d\n", pde_index, pte_index, pde_index_phys, pte_index_phys);
+        // printk("Mapped stack page %d:%d -> %d:%d\n", pde_index, pte_index, pde_index_phys, pte_index_phys);
     }
     
     if (phys_top_out) {

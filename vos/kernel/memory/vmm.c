@@ -95,7 +95,7 @@ void mapPage(uint32_t *pd, uint32_t virt, uint32_t phys, uint32_t flags) {
 //         pt_virt[pt_index] = (phys & 0xFFFFF000) | flags | PAGE_PRESENT;
 //         invalidatePage(VMM_SCRATCHPAD);
 //     }
-//     // printf("Mapped page %d:%d -> %d:%d\n", pd_index, pt_index, phys >> 12, phys & 0xFFF);
+//     printk("Mapped page %d:%d -> %d:%d\n", pd_index, pt_index, phys >> 12, phys & 0xFFF);
 // }
 
 void unmapPage(uint32_t *pd, uint32_t virt) {

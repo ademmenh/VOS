@@ -52,7 +52,8 @@ void schedulePriority(Scheduler *scheduler) {
         uint32_t *prev_esp_ptr = &prev_task->kstack_top;
         uint32_t *next_esp = (uint32_t*)next_task->kstack_top;
         uint32_t next_pd_phys = next_task->pageDirectoryPhys;
-        scheduler->tss->esp0 = next_task->kstack_top;
+        // scheduler->tss->esp0 = next_task->kstack_top;
+        scheduler->tss->esp0 = (uint32_t)(KERNEL_STACK_PAGE + KSTACK_SIZE);
         contextSwitch((uint32_t**)prev_esp_ptr, next_esp, next_pd_phys);
     }
 }
@@ -83,7 +84,7 @@ int addTaskPriority(Scheduler *scheduler, void (*func)(void)) {
     }
     uint32_t *kernel_top = (uint32_t*)physicalToVirtual(phys_top);
     *(--kernel_top) = 0x23;                                     // SS  (User Data Segment)
-    *(--kernel_top) = t->ustack_top;                            // ESP (User Stack Top - PHYSICAL)
+    *(--kernel_top) = STACK_SIZE;                               // ESP (User Stack Top - VIRTUAL)
     *(--kernel_top) = 0x202;                                    // EFLAGS (IF=1)
     *(--kernel_top) = 0x1B;                                     // CS  (User Code Segment)
     *(--kernel_top) = (uint32_t)user_eip;                       // EIP (user-space code)

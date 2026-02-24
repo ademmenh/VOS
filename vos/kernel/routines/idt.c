@@ -5,6 +5,8 @@
 #include "utils/vga.h"
 #include "memory/vmm.h"
 
+extern void handleSyscall(InterruptRegisters *regs);
+
 unsigned char *exception_messages[] = {
     "Division By Zero",
     "Debug",
@@ -52,13 +54,13 @@ IDTDescriptor createIDTDescriptor(uint32_t base, uint16_t selector, uint8_t flag
 
 void handleISR(InterruptRegisters *regs) {
     if (regs->int_no < 32) {
-        printf("EXCEPTION: %s (int %d, err %d)\n", exception_messages[regs->int_no], regs->int_no, regs->err_code);
-        if (regs->int_no == 14) printf("Faulting Address: 0x%x\n", getCR2());
-        printf("EIP: 0x%x  CS: 0x%x  EFLAGS: 0x%x\n", regs->eip, regs->cs, regs->eflags);
-        printf("EAX: 0x%x  EBX: 0x%x  ECX: 0x%x  EDX: 0x%x\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
-        printf("EDI: 0x%x  ESI: 0x%x  EBP: 0x%x  ESP: 0x%x\n", regs->edi, regs->esi, regs->ebp, regs->esp_dummy);
-        printf("DS:  0x%x  ES:  0x%x  FS:  0x%x  GS:  0x%x\n", regs->ds, regs->es, regs->fs, regs->gs);
-        printf("\nKERNEL PANIC: System Halted.");
+        printk("EXCEPTION: %s (int %d, err %d)\n", exception_messages[regs->int_no], regs->int_no, regs->err_code);
+        if (regs->int_no == 14) printk("Faulting Address: 0x%x\n", getCR2());
+        printk("EIP: 0x%x  CS: 0x%x  EFLAGS: 0x%x\n", regs->eip, regs->cs, regs->eflags);
+        printk("EAX: 0x%x  EBX: 0x%x  ECX: 0x%x  EDX: 0x%x\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
+        printk("EDI: 0x%x  ESI: 0x%x  EBP: 0x%x  ESP: 0x%x\n", regs->edi, regs->esi, regs->ebp, regs->esp_dummy);
+        printk("DS:  0x%x  ES:  0x%x  FS:  0x%x  GS:  0x%x\n", regs->ds, regs->es, regs->fs, regs->gs);
+        printk("\nKERNEL PANIC: System Halted.");
         for(;;);
     }
 }
@@ -73,8 +75,13 @@ void handleIRQ(InterruptRegisters *regs){
 }
 
 void handleInterrupt(InterruptRegisters *regs) {
-    if (regs->int_no < 32) handleISR(regs);
-    else handleIRQ(regs);
+    if (regs->int_no == 128) {
+        handleSyscall(regs);
+    } else if (regs->int_no < 32) {
+        handleISR(regs);
+    } else {
+        handleIRQ(regs);
+    }
 }
 
 void installIRQ(IRQHandler *irq_routine, IRQHandler handler){

@@ -51,7 +51,7 @@ void handleKeyboard(InterruptRegisters *regs) {
     if (!released) {
         char asciiChar = scanCodeToAscii(key);
         if (asciiChar)
-            putc(asciiChar);
+            printk("%c", asciiChar);
     }
 }
 

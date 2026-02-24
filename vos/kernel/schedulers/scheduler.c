@@ -25,7 +25,6 @@ void yield(Scheduler *scheduler) {
 }
 
 int addTask(Scheduler *scheduler, void (*func)(void)) {
-    printf("Adding task\n");
     if (scheduler->strategy && scheduler->strategy->addTask) return scheduler->strategy->addTask(scheduler, func);
     return -1;
 }

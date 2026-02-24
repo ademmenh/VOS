@@ -5,6 +5,9 @@
 #include "memory/vmm.h"
 
 extern void userTrampoline();
+// Set up standard FDs
+extern VfsNode vga_stdout_node;
+extern VfsNode vga_stderr_node;
 
 void initRR(Scheduler *scheduler) {
     Task *task = scheduler->tasks;
@@ -30,8 +33,8 @@ void scheduleRR(Scheduler *scheduler) {
             uint32_t *prev_esp_ptr = &prev_task->kstack_top;
             uint32_t *next_esp = (uint32_t*)candidate->kstack_top;
             uint32_t next_pd_phys = candidate->pageDirectoryPhys;
-            // scheduler->tss->esp0 = (uint32_t)(KERNEL_STACK_PAGE + KSTACK_SIZE);
-            scheduler->tss->esp0 = candidate->kstack_top;
+            scheduler->tss->esp0 = (uint32_t)(KERNEL_STACK_PAGE + KSTACK_SIZE);
+            // scheduler->tss->esp0 = candidate->kstack_top;
             contextSwitch((uint32_t**)prev_esp_ptr, next_esp, next_pd_phys);
             return;
         }
@@ -49,13 +52,19 @@ int addTaskRR(Scheduler *scheduler, void (*func)(void)) {
     t->id = scheduler->task_count;
     t->state = TASK_RUNNABLE;
     initFDT(t->fd_table);
+    
+    t->fd_table[STDOUT_FILENO].node = &vga_stdout_node;
+    t->fd_table[STDOUT_FILENO].flags = FD_FLAG_WRITE;
+    t->fd_table[STDERR_FILENO].node = &vga_stderr_node;
+    t->fd_table[STDERR_FILENO].flags = FD_FLAG_WRITE;
+
     createTaskPageStructures(&(t->pageDirectory), &(t->pageDirectoryPhys));
     void *user_eip = loadUserCode(t->pageDirectory, (void*)func, USER_CODE_SIZE);
     if (!user_eip) return -1;
     uint32_t phys_top;
     if (!allocateStack(t->pageDirectory, KERNEL_STACK_PAGE, KSTACK_SIZE, PAGE_RW, &phys_top)) return -1;
     uint32_t user_phys_top;
-    if (!allocateStack(t->pageDirectory, 0, STACK_SIZE, PAGE_RW | PAGE_USER, &user_phys_top)) return -1;
+    if (!allocateStack(t->pageDirectory, USER_STACK_PAGE, STACK_SIZE, PAGE_RW | PAGE_USER, &user_phys_top)) return -1;
     t->ustack_top = user_phys_top;
     uint32_t stack_base_phys = t->ustack_top - STACK_SIZE;
     for (uint32_t i = 0; i < STACK_SIZE; i += PAGE_SIZE) {
@@ -63,7 +72,7 @@ int addTaskRR(Scheduler *scheduler, void (*func)(void)) {
     }
     uint32_t *kernel_top = (uint32_t*)physicalToVirtual(phys_top);
     *(--kernel_top) = 0x23;                                  // SS  (User Data Segment)
-    *(--kernel_top) = t->ustack_top;                         // ESP (User Stack Top - PHYSICAL)
+    *(--kernel_top) = (uint32_t)(USER_STACK_PAGE + STACK_SIZE); // ESP (User Stack Top - VIRTUAL)
     *(--kernel_top) = 0x202;                                 // EFLAGS (IF=1)
     *(--kernel_top) = 0x1B;                                  // CS  (User Code Segment)
     *(--kernel_top) = (uint32_t)user_eip;                    // EIP (user-space code)

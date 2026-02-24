@@ -87,7 +87,7 @@ extern void irq12();
 extern void irq13();
 extern void irq14();
 extern void irq15();
-// extern void isr128();
+extern void isr128();
 // extern void isr177();
 
 #endif
