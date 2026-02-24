@@ -16,17 +16,16 @@
 #include "storage/vfs.h"
 #include "storage/ramfs.h"
 #include "utils/string.h"
-
-extern uint32_t getCurrentesp();
-extern uint32_t getCR3();
-
-extern uint32_t KERNEL_START;
-extern uint32_t KERNEL_END;
-extern uint32_t HEAP_START;
+#include "syscalls/int.h"
 
 #define GDT_LENGTH 6
 #define IDT_LENGTH 256
 #define MAX_TASKS 256
+
+extern uint32_t KERNEL_START;
+extern uint32_t KERNEL_END;
+extern uint32_t HEAP_START;
+extern uint32_t pageDirectory[PDE_COUNT];
 
 GDTR gdtr;
 GDTDescriptor gdt[GDT_LENGTH];
@@ -44,10 +43,6 @@ SchedulerStrategy rr_strategy = {
     .addTask = addTaskRR,
     .removeTask = removeTaskRR 
 };
-
-extern uint32_t pageDirectory[PDE_COUNT];
-
-VfsMount* vfs_root = NULL;
 
 Timer sys_timer;
 Keyboard sys_keyboard;
@@ -70,24 +65,45 @@ IRQHandler irq_routines[16] = {
     0, 
 };
 
-// User-space task functions — must be self-contained (no kernel calls).
-// They run in Ring 3 with code copied to user pages at 0x00001000.
+VfsMount* vfs_root = NULL;
+VfsOps vga_ops = {
+    .openNode = NULL,
+    .closeNode = NULL,
+    .readNode = readFromVgaNode,
+    .writeNode = writeToVgaNode,
+    .lookupNode = NULL,
+    .createNode = NULL
+};
+
+VfsNode vga_stdout_node;
+VfsNode vga_stderr_node;
+VfsNode vga_stdin_node;
+
+// printing a -> z, then repeat with delays
 void task1(void) {
-    volatile int x = 0;
-    while (1) { x++; }
+    char x = 'a';
+    while(1) {
+        // int80(1, 1, (int)&x, 1);
+        int80(1, 2, (int)&x, 1);
+        x++;
+        if (x > 'z') x = 'a';
+        for(volatile int i = 0; i < 100; i++); 
+    }
 }
 
+// printing A -> Z, then repeat with delays
 void task2(void) {
-    volatile int y = 0;
-    while (1) { y++; }
+    char x = 'A';
+    while(1) {
+        int80(1, 1, (int)&x, 1);
+        x++;
+        if (x > 'Z') x = 'A';
+        for(volatile int j = 0; j < 100; j++); 
+    }
 }
 
-void task3(void) {
-    volatile int z = 0;
-    while (1) { z++; }
-}
 
-void main () {
+int main () {
     // uint32_t cr0;
     // asm volatile ("mov %%cr0, %0" : "=r"(cr0));
     // if (cr0 & 1)
@@ -182,7 +198,7 @@ void main () {
     idt[45] = createIDTDescriptor((uint32_t)irq13, 0x08, 0x8E);
     idt[46] = createIDTDescriptor((uint32_t)irq14, 0x08, 0x8E);
     idt[47] = createIDTDescriptor((uint32_t)irq15, 0x08, 0x8E);
-    // idt[128] = createIDTDescriptor((uint32_t)isr128, 0x08, 0x8E);
+    idt[128] = createIDTDescriptor((uint32_t)isr128, 0x08, 0xEE);
     // idt[177] = createIDTDescriptor((uint32_t)isr177, 0x08, 0x8E);
     loadIDT((uint32_t)&idtr);
     initTimer(&sys_timer, 10, &scheduler);
@@ -190,35 +206,34 @@ void main () {
     initKeyboard(&sys_keyboard);
     installIRQ(&irq_routines[1], handleKeyboard);
     sti();
-    // vgaClear();
+    sti();
 
-    // printf("pageDirectory address: %p\n", pageDirectory);
-    // printf("pageTable address: %p\n", pageTable);
-    // printf("stackPageTable address: %p\n", stackPageTable);
-    // printf("pageDirectory[768]: %p\n", pageDirectory[768]);
-    // printf("pageDirectory[1023]: %p\n", pageDirectory[1023]);
-    // printf("pageTable[0]: %p\n", pageTable[0]);
-    // printf("pageTable[1]: %p\n", pageTable[1]);
-    // printf("pageTable[2]: %p\n", pageTable[2]);
-    // printf("pageTable[3]: %p\n", pageTable[3]);
-    // printf("pageTable[1020]: %p\n", pageTable[1020]);
-    // printf("pageTable[1021]: %p\n", pageTable[1021]);
-    // printf("pageTable[1022]: %p\n", pageTable[1022]);
-    // printf("pageTable[1023]: %p\n", pageTable[1023]);
+    // printk("pageDirectory address: %p\n", pageDirectory);
+    // printk("pageTable address: %p\n", pageTable);
+    // printk("stackPageTable address: %p\n", stackPageTable);
+    // printk("pageDirectory[768]: %p\n", pageDirectory[768]);
+    // printk("pageDirectory[1023]: %p\n", pageDirectory[1023]);
+    // printk("pageTable[0]: %p\n", pageTable[0]);
+    // printk("pageTable[1]: %p\n", pageTable[1]);
+    // printk("pageTable[2]: %p\n", pageTable[2]);
+    // printk("pageTable[3]: %p\n", pageTable[3]);
+    // printk("pageTable[1020]: %p\n", pageTable[1020]);
+    // printk("pageTable[1021]: %p\n", pageTable[1021]);
+    // printk("pageTable[1022]: %p\n", pageTable[1022]);
+    // printk("pageTable[1023]: %p\n", pageTable[1023]);
     
-    // printf("stackPageTable[1016]: %p\n", kernelStackPageTable[1016]);
-    // printf("stackPageTable[1017]: %p\n", kernelStackPageTable[1017]);
-    // printf("stackPageTable[1018]: %p\n", kernelStackPageTable[1018]);
-    // printf("stackPageTable[1019]: %p\n", kernelStackPageTable[1019]);
-    // printf("stackPageTable[1020]: %p\n", kernelStackPageTable[1020]);
-    // printf("stackPageTable[1021]: %p\n", kernelStackPageTable[1021]);
-    // printf("stackPageTable[1022]: %p\n", kernelStackPageTable[1022]);
-    // printf("stackPageTable[1023]: %p\n", kernelStackPageTable[1023]);
-    // printf("kernel end: %p\n", (uint32_t)&KERNEL_END);
-    // printf("kernel offset: %p\n", (uint32_t)KERNEL_OFFSET);
-    // printf("kernel size: %d\n", (uint32_t)&KERNEL_END - (uint32_t)KERNEL_OFFSET);
-    // printf("kernel frames: %d\n", (uint32_t)KERNEL_FRAMES);
-    // kernel stack pointer
+    // printk("stackPageTable[1017]: %p\n", kernelStackPageTable[1017]);
+    // printk("stackPageTable[1016]: %p\n", kernelStackPageTable[1016]);
+    // printk("stackPageTable[1018]: %p\n", kernelStackPageTable[1018]);
+    // printk("stackPageTable[1019]: %p\n", kernelStackPageTable[1019]);
+    // printk("stackPageTable[1020]: %p\n", kernelStackPageTable[1020]);
+    // printk("stackPageTable[1021]: %p\n", kernelStackPageTable[1021]);
+    // printk("stackPageTable[1022]: %p\n", kernelStackPageTable[1022]);
+    // printk("stackPageTable[1023]: %p\n", kernelStackPageTable[1023]);
+    // printk("kernel end: %p\n", (uint32_t)&KERNEL_END);
+    // printk("kernel offset: %p\n", (uint32_t)KERNEL_OFFSET);
+    // printk("kernel size: %d\n", (uint32_t)&KERNEL_END - (uint32_t)KERNEL_OFFSET);
+    // printk("kernel frames: %d\n", (uint32_t)KERNEL_FRAMES);
 
     // init PMM, VMM
     uint32_t mem_size = 0xFFFFFFFF;
@@ -245,6 +260,40 @@ void main () {
     initRamfs();
     VfsNode* ramfs_root = getRamfsRootNode();
     mountVfsRoot(&vfs_root, ramfs_root);
+
+    // Initialize VGA nodes
+    memset(&vga_stdout_node, 0, sizeof(VfsNode));
+    strcpy(vga_stdout_node.name, "tty0");
+    vga_stdout_node.type = VFS_TYPE_CHAR_DEVICE;
+    vga_stdout_node.ops = &vga_ops;
+    vga_stdout_node.internal = (void*)(uintptr_t)COLOR8_WHITE;
+
+    memset(&vga_stderr_node, 0, sizeof(VfsNode));
+    strcpy(vga_stderr_node.name, "tty0_err"); // Internal name
+    vga_stderr_node.type = VFS_TYPE_CHAR_DEVICE;
+    vga_stderr_node.ops = &vga_ops;
+    vga_stderr_node.internal = (void*)(uintptr_t)COLOR8_RED;
+
+    memset(&vga_stdin_node, 0, sizeof(VfsNode));
+    strcpy(vga_stdin_node.name, "tty0_in"); // Internal name
+    vga_stdin_node.type = VFS_TYPE_CHAR_DEVICE;
+    vga_stdin_node.ops = &vga_ops;
+    vga_stdin_node.internal = (void*)(uintptr_t)COLOR8_WHITE;
+
+    // inside ifs check with !, and print the errors
+    // Create /dev/tty0
+    VfsNode* dev_dir = createVfsNode(ramfs_root, "dev", VFS_TYPE_DIRECTORY);
+    if (!dev_dir) {
+        printk("Failed to create /dev directory\n");
+        return -1;
+    }
+    VfsNode* tty0 = createVfsNode(dev_dir, "tty0", VFS_TYPE_CHAR_DEVICE);
+    if (!tty0) {
+        printk("Failed to create /dev/tty0\n");
+        return -1;
+    }
+    tty0->ops = &vga_ops;
+    tty0->internal = (void*)(uintptr_t)COLOR8_WHITE;
     // Testing VFS
     // VfsNode* dev  = createVfsNode(ramfs_root, "dev", VFS_TYPE_DIRECTORY);
     // // Create /hello.txt
@@ -254,11 +303,11 @@ void main () {
     // writeVfsNode(file, 0, sizeof(msg), (uint8_t*)msg);
     // char read_msg[sizeof(msg)];
     // readVfsNode(file, 0, sizeof(msg), (uint8_t*)read_msg);
-    // printf("read_msg: %s\n", read_msg);
+    // printk("read_msg: %s\n", read_msg);
     // writeVfsNode(file, 0, sizeof(msg2), (uint8_t*)msg2);
     // char read_msg2[sizeof(msg2)];
     // readVfsNode(file, 0, sizeof(msg2), (uint8_t*)read_msg2);
-    // printf("read_msg2: %s\n", read_msg2);
+    // printk("read_msg2: %s\n", read_msg2);
 
     // uint32_t addr = 0;
     // printf("addr: %p\n", &addr);
@@ -267,17 +316,9 @@ void main () {
     // uint32_t var = 0x12345678;
     // printf("var: %p\n", &var);
 
-    // Test Page Fault
-    // uint32_t *p = (uint32_t*)0xFFFFFFFC;
-    // *p = 0;
-    // printf("p: %p\n", p);
-    // uint32_t *q = (uint32_t*)0xFFFFFFFF;
-    // *q = 0;
-    // printf("q: %p\n", q);
-
     initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS, pageDirectory, &tss);
-    int t1 = addTask(&scheduler, task1);
-    int t2 = addTask(&scheduler, task2);
-    int t3 = addTask(&scheduler, task3);
+    addTask(&scheduler, task1);
+    addTask(&scheduler, task2);
+    
     while(1);
 }
