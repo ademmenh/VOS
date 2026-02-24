@@ -3,6 +3,10 @@
 #include "utils/asm.h"
 #include "memory/vmm.h"
 #include "kernel_stdarg.h"
+#include "kernel_stdarg.h"
+#include <stdint.h>
+
+#define LOCAL_BUF_SIZE 512  // stack-local buffer for a single kprintf call
 
 uint16_t column = 0;
 uint16_t line = 0;
@@ -11,7 +15,7 @@ uint16_t* const vga = (uint16_t* const)(0xB8000 + KERNEL_OFFSET);
 const uint16_t defaultColor = (COLOR8_LIGHT_GREY << 8) | (COLOR8_BLACK << 12);
 uint16_t currentColor = defaultColor;
 
-void vgaClear(){
+static void vgaClear(){
     cli();
     line = 0;
     column = 0;
@@ -25,7 +29,21 @@ void vgaClear(){
     sti();
 }
 
-void vgaNewLine(){
+static void vgaScrollUp(){
+    cli();
+    for (uint16_t y = 0; y < height; y++){
+        for (uint16_t x = 0; x < width; x++){
+            vga[(y-1) * width + x] = vga[y*width+x];
+        }
+    }
+    // Clear the last line
+    for (uint16_t x = 0; x < width; x++){
+        vga[(height-1) * width + x] = ' ' | currentColor;
+    }
+    sti();
+}
+
+static void vgaNewLine(){
     if (line < height - 1){
         line++;
         column = 0;
@@ -35,21 +53,7 @@ void vgaNewLine(){
     }
 }
 
-void vgaScrollUp(){
-    cli();
-    for (uint16_t y = 0; y < height; y++){
-        for (uint16_t x = 0; x < width; x++){
-            vga[(y-1) * width + x] = vga[y*width+x];
-        }
-    }
-    asm volatile("sti");
-    for (uint16_t x = 0; x < width; x++){
-        vga[(height-1) * width + x] = ' ' | currentColor;
-    }
-    sti();
-}
-
-void print(const char* s){
+static void print(const char* s){
     cli();
     while(*s){
         switch(*s){
@@ -82,7 +86,7 @@ void print(const char* s){
     sti();
 }
 
-void putc(char c) {
+static void putc(char c) {
     cli();
     switch(c) {
         case '\n':
@@ -137,12 +141,7 @@ void printHex(uint32_t num) {
     print(&buf[i]);
 }
 
-#include "kernel_stdarg.h"
-#include <stdint.h>
 
-#define LOCAL_BUF_SIZE 512  // stack-local buffer for a single kprintf call
-
-// Helper: decimal number into buffer, returns new position
 static int decToBuf(uint32_t num, char* buf, int pos) {
     char tmp[11];
     int i = 0;
@@ -158,7 +157,6 @@ static int decToBuf(uint32_t num, char* buf, int pos) {
     return pos;
 }
 
-// Helper: hex number into buffer, returns new position
 static int hexToBuf(uint32_t num, char* buf, int pos, int prefix) {
     if (prefix) {
         buf[pos++] = '0';
@@ -179,7 +177,7 @@ static int hexToBuf(uint32_t num, char* buf, int pos, int prefix) {
     return pos;
 }
 
-void printf(const char* fmt, ...) {
+void printk(const char* fmt, ...) {
     char buf[LOCAL_BUF_SIZE]; // buffer for this call
     int pos = 0;
 
@@ -238,4 +236,34 @@ void printf(const char* fmt, ...) {
     va_end(args);
 
     print(buf); // single VGA call
+}
+
+int readVga(uint8_t *buffer, uint32_t size) {
+    // VGA text mode reading is not typically useful for standard terminal input
+    // Stub for now. Ideally this would read from keyboard buffer if this was a TTY.
+    return 0;
+}
+
+int writeVga(const uint8_t *buffer, uint32_t size, uint8_t color) {
+    cli();
+    uint16_t oldColor = currentColor;
+    currentColor = (color << 8) | (COLOR8_BLACK << 12);
+    
+    for (uint32_t i = 0; i < size; i++) {
+        putc((char)buffer[i]);
+    }
+    
+    currentColor = oldColor;
+    sti();
+    return (int)size;
+}
+
+int readFromVgaNode(VfsNode *node, uint32_t offset, uint32_t size, uint8_t *buffer) {
+    return readVga(buffer, size);
+}
+
+int writeToVgaNode(VfsNode *node, uint32_t offset, uint32_t size, uint8_t *buffer) {
+    uint8_t color = (uint8_t)(uintptr_t)node->internal;
+    if (color == 0) color = COLOR8_WHITE; // Default
+    return writeVga(buffer, size, color);
 }

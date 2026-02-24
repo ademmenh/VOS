@@ -1,6 +1,8 @@
 #ifndef VGA_H
 #define VGA_H
 
+#include "storage/vfs.h"
+
 #define COLOR8_BLACK 0
 #define COLOR8_BLUE 1
 #define COLOR8_GREEN 2
@@ -20,15 +22,13 @@
 #define width 80
 #define height 25
 
-void putc(char c);
-void print(const char* s);
-void vgaScrollUp();
-void vgaNewLine();
-void vgaClear();
 void printDec(uint32_t num);
 void printHex(uint32_t num);
-void printDec(uint32_t num);
-void printHex(uint32_t num);
-void printf(const char* fmt, ...);
+void printk(const char* fmt, ...);
+
+int readVga(uint8_t *buffer, uint32_t size);
+int writeVga(const uint8_t *buffer, uint32_t size, uint8_t color);
+int readFromVgaNode(VfsNode *node, uint32_t offset, uint32_t size, uint8_t *buffer);
+int writeToVgaNode(VfsNode *node, uint32_t offset, uint32_t size, uint8_t *buffer);
 
 #endif
