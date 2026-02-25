@@ -11,6 +11,7 @@
 
 #define FD_FLAG_READ  0x01
 #define FD_FLAG_WRITE 0x02
+#define O_CREAT       0x40
 
 typedef struct FileDescriptor {
     struct VfsNode *node;

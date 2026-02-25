@@ -9,6 +9,7 @@
 #define VFS_TYPE_DIRECTORY   0x02
 #define VFS_TYPE_CHAR_DEVICE 0x03
 #define VFS_TYPE_BLOCK_DEVICE 0x04
+#define VFS_TYPE_SYMLINK     0x05
 
 typedef struct VfsNode VfsNode;
 typedef struct VfsOps VfsOps;
@@ -22,6 +23,7 @@ struct VfsOps {
     VfsNode *(*lookupNode)(VfsNode *parent, const char *name);
     VfsNode *(*createNode)(VfsNode *parent, const char *name, uint32_t type);
     int (*statNode)(VfsNode *node, struct StatBuf *buf);
+    int (*readlinkNode)(VfsNode *node, char *buf, uint32_t size);
 };
 
 struct VfsNode {
@@ -50,5 +52,9 @@ int writeVfsNode(VfsNode *node, uint32_t offset, uint32_t size, uint8_t *buffer)
 VfsNode *createVfsNode(VfsNode *parent, const char *name, uint32_t type);
 
 int statVfsNode(VfsNode *node, struct StatBuf *buf);
+
+int readVfsLink(VfsNode *node, char *buf, uint32_t size);
+
+VfsNode *openVfsPathEx(VfsMount* root_mount, const char *path, int follow_last);
 
 #endif

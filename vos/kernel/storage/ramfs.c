@@ -6,6 +6,7 @@ static VfsNode *createRamfsNode(VfsNode *parent, const char *name, uint32_t type
 static VfsNode *lookupRamfsNode(VfsNode *parent, const char *name);
 static int readRamfsNode(VfsNode *node, uint32_t offset, uint32_t size, uint8_t *buffer);
 static int writeRamfsNode(VfsNode *node, uint32_t offset, uint32_t size, uint8_t *buffer);
+static int ramfs_readlink(VfsNode *node, char *buf, uint32_t size);
 static RamfsNode *convertToRamfsNode(VfsNode *node);
 static RamfsNode *allocateRamfsNode(const char *name, uint32_t type);
 
@@ -17,7 +18,8 @@ static VfsOps ramfs_ops = {
     .readNode   = readRamfsNode,
     .writeNode  = writeRamfsNode,
     .lookupNode = lookupRamfsNode,
-    .createNode = createRamfsNode
+    .createNode = createRamfsNode,
+    .readlinkNode = ramfs_readlink
 };
 
 void initRamfs() {
@@ -51,7 +53,7 @@ static VfsNode* lookupRamfsNode(VfsNode* parent_node, const char* name) {
 
 static int readRamfsNode(VfsNode* node, uint32_t offset, uint32_t size, uint8_t* buffer) {
     RamfsNode* ram_node = convertToRamfsNode(node);
-    if (ram_node->vfs.type != VFS_TYPE_FILE) return -1;
+    if (ram_node->vfs.type != VFS_TYPE_FILE && ram_node->vfs.type != VFS_TYPE_SYMLINK) return -1;
     if (offset >= ram_node->vfs.size) return 0;
     if (offset + size > ram_node->vfs.size) size = ram_node->vfs.size - offset;
     memcpy(buffer, ram_node->data + offset, size);
@@ -60,7 +62,7 @@ static int readRamfsNode(VfsNode* node, uint32_t offset, uint32_t size, uint8_t*
 
 static int writeRamfsNode(VfsNode* node, uint32_t offset, uint32_t size, uint8_t* buffer) {
     RamfsNode* ram_node = convertToRamfsNode(node);
-    if (ram_node->vfs.type != VFS_TYPE_FILE) return -1;
+    if (ram_node->vfs.type != VFS_TYPE_FILE && ram_node->vfs.type != VFS_TYPE_SYMLINK) return -1;
     uint32_t required_size = offset + size;
     if (required_size > ram_node->capacity) {
         uint32_t new_capacity = required_size * 2;
@@ -79,6 +81,16 @@ static int writeRamfsNode(VfsNode* node, uint32_t offset, uint32_t size, uint8_t
 
 static RamfsNode* convertToRamfsNode(VfsNode* node) {
     return (RamfsNode*)node;
+}
+
+static int ramfs_readlink(VfsNode* node, char* buf, uint32_t size) {
+    RamfsNode* ram_node = convertToRamfsNode(node);
+    if (ram_node->vfs.type != VFS_TYPE_SYMLINK) return -1;
+    if (!ram_node->data) return 0;
+    uint32_t len = ram_node->vfs.size;
+    if (len > size) len = size;
+    memcpy(buf, ram_node->data, len);
+    return len;
 }
 
 static RamfsNode* allocateRamfsNode(const char* name, uint32_t type) {

@@ -19,21 +19,75 @@ int mountVfsRoot(VfsMount** root_mount, VfsNode* root_node) {
 }
 
 VfsNode* openVfsPath(VfsMount* root_mount, const char* path) {
+    return openVfsPathEx(root_mount, path, 1);
+}
+
+VfsNode* openVfsPathEx(VfsMount* root_mount, const char* path, int follow_last) {
     if (!root_mount || !path || path[0] != '/') return NULL;
+    
     char* path_copy = (char*)kmalloc(strlen(path) + 1);
     strcpy(path_copy, path);
     char* walker = path_copy;
     VfsNode* current_node = root_mount->root;
+    VfsNode* parent_node = root_mount->root;
     char* token;
+    
+    int symlink_count = 0;
     while ((token = getNextPathToken(&walker))) {
         if (!current_node->ops || !current_node->ops->lookupNode) {
             kfree(path_copy);
             return NULL;
         }
-        current_node = current_node->ops->lookupNode(current_node, token);
-        if (!current_node) {
+        
+        VfsNode* next_node = current_node->ops->lookupNode(current_node, token);
+        if (!next_node) {
             kfree(path_copy);
             return NULL;
+        }
+        
+        parent_node = current_node;
+        current_node = next_node;
+        
+        char* remaining_path = walker;
+        int is_last = (*remaining_path == 0);
+        
+        if (current_node->type == VFS_TYPE_SYMLINK) {
+            if (!is_last || follow_last) {
+                if (++symlink_count > 8) {
+                    kfree(path_copy);
+                    return NULL;
+                }
+                
+                char link_buf[256];
+                int link_len = readVfsLink(current_node, link_buf, sizeof(link_buf));
+                if (link_len <= 0) {
+                    kfree(path_copy);
+                    return NULL;
+                }
+                link_buf[link_len] = 0;
+                
+                int new_path_len = strlen(link_buf) + strlen(remaining_path) + 2;
+                char* new_path = (char*)kmalloc(new_path_len);
+                strcpy(new_path, link_buf);
+                if (!is_last) {
+                    if (link_buf[link_len - 1] != '/' && *remaining_path != 0) {
+                        strcat(new_path, "/");
+                    }
+                    strcat(new_path, remaining_path);
+                }
+                
+                kfree(path_copy);
+                path_copy = new_path;
+                walker = path_copy;
+                
+                if (link_buf[0] == '/') {
+                    current_node = root_mount->root;
+                    parent_node = root_mount->root;
+                    while (*walker == '/') walker++;
+                } else {
+                    current_node = parent_node;
+                }
+            }
         }
     }
     kfree(path_copy);
@@ -67,6 +121,14 @@ int statVfsNode(VfsNode* node, struct StatBuf* buf) {
     buf->st_size = node->size;
     buf->st_mode = node->type; // This needs proper mapping eventually
     return 0;
+}
+
+int readVfsLink(VfsNode* node, char* buf, uint32_t size) {
+    if (!node || !buf || node->type != VFS_TYPE_SYMLINK) return -1;
+    if (node->ops && node->ops->readlinkNode) {
+        return node->ops->readlinkNode(node, buf, size);
+    }
+    return -1;
 }
 
 static char* getNextPathToken(char** path_ptr) {
