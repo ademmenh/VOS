@@ -6,10 +6,10 @@ typedef int (*Syscall2)(int, int);
 typedef int (*Syscall1)(int);
 
 void *syscalls[MAX_SYSCALLS] = {
-    // sys_read,
-    // sys_write,
-    // sys_open,
-    // sys_close,
+    sys_read,
+    sys_write,
+    sys_open,
+    sys_close,
 };
 
 void handleSyscall(InterruptRegisters *regs) {
