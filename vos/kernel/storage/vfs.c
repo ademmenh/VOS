@@ -56,6 +56,19 @@ VfsNode* createVfsNode(VfsNode* parent, const char* name, uint32_t type) {
     return parent->ops->createNode(parent, name, type);
 }
 
+int statVfsNode(VfsNode* node, struct StatBuf* buf) {
+    if (!node || !buf) return -1;
+    if (node->ops && node->ops->statNode) {
+        return node->ops->statNode(node, buf);
+    }
+    
+    // Default fallback: fill what we know from VfsNode
+    memset(buf, 0, sizeof(struct StatBuf));
+    buf->st_size = node->size;
+    buf->st_mode = node->type; // This needs proper mapping eventually
+    return 0;
+}
+
 static char* getNextPathToken(char** path_ptr) {
     if (**path_ptr == 0) return NULL;
     while (**path_ptr == '/') (*path_ptr)++;

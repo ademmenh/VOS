@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "storage/stat.h"
 
 #define VFS_TYPE_FILE        0x01
 #define VFS_TYPE_DIRECTORY   0x02
@@ -20,6 +21,7 @@ struct VfsOps {
     int (*writeNode)(VfsNode *node, uint32_t offset, uint32_t size, uint8_t *buffer);
     VfsNode *(*lookupNode)(VfsNode *parent, const char *name);
     VfsNode *(*createNode)(VfsNode *parent, const char *name, uint32_t type);
+    int (*statNode)(VfsNode *node, struct StatBuf *buf);
 };
 
 struct VfsNode {
@@ -46,5 +48,7 @@ int readVfsNode(VfsNode *node, uint32_t offset, uint32_t size, uint8_t *buffer);
 int writeVfsNode(VfsNode *node, uint32_t offset, uint32_t size, uint8_t *buffer);
 
 VfsNode *createVfsNode(VfsNode *parent, const char *name, uint32_t type);
+
+int statVfsNode(VfsNode *node, struct StatBuf *buf);
 
 #endif
