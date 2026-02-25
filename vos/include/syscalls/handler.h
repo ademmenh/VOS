@@ -15,7 +15,7 @@
 #define SYS_LSTAT     6
 #define SYS_SYMLINK   7
 #define SYS_READLINK  8
-// #define SYS_EXIT      9
+#define SYS_EXIT      9
 
 void handleSyscall(InterruptRegisters *regs);
 
@@ -28,6 +28,6 @@ int sys_fstat(int fd, struct StatBuf *buf);
 int sys_lstat(const char *path, struct StatBuf *buf);
 int sys_symlink(const char *target, const char *linkpath);
 int sys_readlink(const char *path, char *buf, int bufsiz);
-// int sys_exit(int status);
+int sys_exit(int status);
 
 #endif

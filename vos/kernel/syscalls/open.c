@@ -10,18 +10,40 @@ extern VfsMount* vfs_root;
 
 int sys_open(const char *path, int flags, int mode) {
     if (!path) return -1;
+    
     VfsNode *node = openVfsPath(vfs_root, path);
+    if (!node) {
+        if (flags & O_CREAT) {
+            char* path_copy = (char*)kmalloc(strlen(path) + 1);
+            strcpy(path_copy, path);
+            char* last_slash = strrchr(path_copy, '/');
+            VfsNode* parent = NULL;
+            const char* name = NULL;
+            
+            if (last_slash == path_copy) {
+                parent = vfs_root->root;
+                name = path + 1;
+            } else if (last_slash) {
+                *last_slash = 0;
+                parent = openVfsPath(vfs_root, path_copy);
+                name = last_slash + 1;
+            }
+            
+            if (parent && parent->type == VFS_TYPE_DIRECTORY) {
+                node = createVfsNode(parent, name, VFS_TYPE_FILE);
+            }
+            kfree(path_copy);
+        }
+    }
+    
     if (!node) return -1;
+    
     Task *current_task = &scheduler.tasks[scheduler.current_idx];
     int fd = allocFD(current_task->fd_table);
     if (fd < 0) return -1;
     FileDescriptor *fdesc = &current_task->fd_table[fd];
     fdesc->node = node;
     fdesc->offset = 0;
-    // For now, map all opens to read/write if not specified or just use flags directly
-    // Assuming flags match FD_FLAG_READ/WRITE for simplicity or we can implement mapping
-    // STDIN/OUT/ERR are usually 0, 1, 2.
-    // Let's assume flags are a bitmask of FD_FLAG_READ and FD_FLAG_WRITE for now.
     fdesc->flags = flags; 
     return fd;
 }

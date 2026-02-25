@@ -15,6 +15,7 @@ void *syscalls[MAX_SYSCALLS] = {
     [SYS_LSTAT] = sys_lstat,
     [SYS_SYMLINK] = sys_symlink,
     [SYS_READLINK] = sys_readlink,
+    [SYS_EXIT] = sys_exit,
 };
 
 void handleSyscall(InterruptRegisters *regs) {
@@ -34,7 +35,7 @@ void handleSyscall(InterruptRegisters *regs) {
     if (regs->eax == SYS_READ || regs->eax == SYS_WRITE || regs->eax == SYS_OPEN || regs->eax == SYS_READLINK) {
         Syscall3 sc = (Syscall3)location;
         ret = sc(regs->ebx, regs->ecx, regs->edx);
-    } else if (regs->eax == SYS_CLOSE) {
+    } else if (regs->eax == SYS_CLOSE || regs->eax == SYS_EXIT) {
         Syscall1 sc = (Syscall1)location;
         ret = sc(regs->ebx);
     } else if (regs->eax == SYS_STAT || regs->eax == SYS_FSTAT || regs->eax == SYS_LSTAT || regs->eax == SYS_SYMLINK) {
