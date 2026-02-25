@@ -14,10 +14,10 @@ void *allocateStack(uint32_t *pd, uint32_t virt_start, uint32_t size, uint32_t f
         if (frame < 0) return NULL;
         uint32_t phys = (uint32_t)frame * PAGE_SIZE;
         uint32_t virt = virt_start + (i * PAGE_SIZE);
-        uint32_t pde_index = virt >> 22;
-        uint32_t pte_index = (virt >> 12) & 0x3FF;
-        uint32_t pde_index_phys = pde_index >>22;
-        uint32_t pte_index_phys = phys >> 12;
+        // uint32_t pde_index = virt >> 22;
+        // uint32_t pte_index = (virt >> 12) & 0x3FF;
+        // uint32_t pde_index_phys = pde_index >>22;
+        // uint32_t pte_index_phys = phys >> 12;
         // Map into the task's PD (using recursive scratchpad if not current)
         mapPage(pd, virt, phys, flags);
         last_phys = phys;

@@ -1,0 +1,141 @@
+#include "syscalls/int.h"
+#include "syscalls/handler.h"
+#include "storage/vfs.h"
+#include "schedulers/fdt.h"
+
+void test_syscalls_task(void) {
+    int80(SYS_WRITE, 1, (int)"Starting syscall tests...\n", 26);
+    
+    char path[] = "/test.txt";
+    char content[] = "Hello Syscalls!";
+    char link_path[] = "/link.txt";
+    char rel_link[] = "/rel_link.txt";
+    char target_rel[] = "test.txt";
+    char buf[64];
+    struct StatBuf st;
+    int res;
+
+    // 1. Open/Create (using O_CREAT | FD_FLAG_WRITE)
+    int fd = int80(SYS_OPEN, (int)path, O_CREAT | FD_FLAG_WRITE, 0);
+    if (fd < 0) {
+        int80(SYS_WRITE, 1, (int)"Test Fail: open\n", 16);
+        while(1);
+    }
+    int80(SYS_WRITE, 1, (int)"Test Pass: open\n", 16);
+    
+    // 2. Write
+    res = int80(SYS_WRITE, fd, (int)content, 15);
+    if (res < 0) {
+        int80(SYS_WRITE, 1, (int)"Test Fail: write\n", 17);
+        while(1);
+    }
+    int80(SYS_WRITE, 1, (int)"Test Pass: write\n", 17);
+    
+    // 3. Close
+    int80(SYS_CLOSE, fd, 0, 0);
+    int80(SYS_WRITE, 1, (int)"Test Pass: close\n", 17);
+    
+    // 4. Stat
+    res = int80(SYS_STAT, (int)path, (int)&st, 0);
+    if (res < 0 || (int)st.st_size != 15) {
+        int80(SYS_WRITE, 1, (int)"Test Fail: stat\n", 16);
+        while(1);
+    }
+    int80(SYS_WRITE, 1, (int)"Test Pass: stat\n", 16);
+    
+    // 5. Symlink
+    res = int80(SYS_SYMLINK, (int)path, (int)link_path, 0);
+    if (res < 0) {
+        int80(SYS_WRITE, 1, (int)"Test Fail: symlink\n", 19);
+        while(1);
+    }
+    int80(SYS_WRITE, 1, (int)"Test Pass: symlink\n", 19);
+    
+    // 6. Readlink
+    for(int i=0; i<64; i++) buf[i] = 0;
+    res = int80(SYS_READLINK, (int)link_path, (int)buf, 64);
+    int match = 1;
+    char path_cmp[] = "/test.txt";
+    for(int i=0; path_cmp[i]; i++) if(buf[i] != path_cmp[i]) match = 0;
+    if (res < 0 || !match) {
+        int80(SYS_WRITE, 1, (int)"Test Fail: readlink\n", 20);
+        while(1);
+    }
+    int80(SYS_WRITE, 1, (int)"Test Pass: readlink\n", 20);
+    
+    // 7. Open Link (Follow)
+    int fd2 = int80(SYS_OPEN, (int)link_path, FD_FLAG_READ, 0);
+    if (fd2 < 0) {
+        int80(SYS_WRITE, 1, (int)"Test Fail: open link\n", 21);
+        while(1);
+    }
+    int80(SYS_WRITE, 1, (int)"Test Pass: open link\n", 21);
+    
+    // 8. Read from link
+    for(int i=0; i<64; i++) buf[i] = 0;
+    res = int80(SYS_READ, fd2, (int)buf, 15);
+    match = 1;
+    for(int i=0; i<15; i++) if(buf[i] != content[i]) match = 0;
+    if (res < 0 || !match) {
+        int80(SYS_WRITE, 1, (int)"Test Fail: read link\n", 21);
+        while(1);
+    }
+    int80(SYS_WRITE, 1, (int)"Test Pass: read link\n", 21);
+    int80(SYS_CLOSE, fd2, 0, 0);
+    
+    // 9. Lstat
+    res = int80(SYS_LSTAT, (int)link_path, (int)&st, 0);
+    if (res < 0 || st.st_mode != VFS_TYPE_SYMLINK) {
+        int80(SYS_WRITE, 1, (int)"Test Fail: lstat\n", 17);
+        while(1);
+    }
+    int80(SYS_WRITE, 1, (int)"Test Pass: lstat\n", 17);
+
+    // 10. Relative symlink test
+    res = int80(SYS_SYMLINK, (int)target_rel, (int)rel_link, 0);
+    if (res >= 0) {
+        int fd3 = int80(SYS_OPEN, (int)rel_link, FD_FLAG_READ, 0);
+        if (fd3 >= 0) {
+            for(int i=0; i<64; i++) buf[i] = 0;
+            int80(SYS_READ, fd3, (int)buf, 15);
+            match = 1;
+            for(int i=0; i<15; i++) if(buf[i] != content[i]) match = 0;
+            if (match) {
+                int80(SYS_WRITE, 1, (int)"Test Pass: relative link\n", 25);
+            } else {
+                int80(SYS_WRITE, 1, (int)"Test Fail: rel link read\n", 24);
+            }
+            int80(SYS_CLOSE, fd3, 0, 0);
+        } else {
+            int80(SYS_WRITE, 1, (int)"Test Fail: open rel link\n", 25);
+        }
+    } else {
+        int80(SYS_WRITE, 1, (int)"Test Fail: create rel link\n", 27);
+    }
+
+    int80(SYS_WRITE, 1, (int)"ALL SYSCALL TESTS PASSED!\n", 26);
+    int80(SYS_EXIT, 0, 0, 0);
+}
+
+// from a to z then repeat
+void task1() {
+    char c = 'a';
+    while(1) {
+        int80(SYS_WRITE, 1, (int)&c, 1);
+        c++;
+        if(c == 'z') c = 'a';
+    }
+    int80(SYS_EXIT, 0, 0, 0);
+}
+// from A to Z then repeat
+void task2() {
+    char c = 'A';
+    while(1) {
+        int80(SYS_WRITE, 2, (int)&c, 1);
+        c++;
+        if(c == 'Z') c = 'A';
+    }
+    int80(SYS_EXIT, 0, 0, 0);
+}
+
+

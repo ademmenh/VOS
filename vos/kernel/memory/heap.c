@@ -2,6 +2,7 @@
 #include "memory/pmm.h"
 #include "memory/vmm.h"
 #include "utils/string.h"
+#include "schedulers/task.h"
 #include <stddef.h>
 
 #define HEAP_MAGIC 0xCAFEBABE
@@ -45,20 +46,23 @@ static HeapBlock* findFreeBlock(uint32_t size) {
 
 static HeapBlock* expandHeap(uint32_t size) {
     // Ensure heap_end is page aligned
-    if (heap_end & 0xFFF) heap_end = (heap_end + 0x1000) & ~0xFFF;
-    uint32_t pages =(size + sizeof(HeapBlock) + 0xFFF) / 0x1000;
+    if (heap_end & PAGE_OFFSET_MASK) heap_end = (heap_end + PAGE_SIZE) & PAGE_MASK;
+    uint32_t pages =(size + sizeof(HeapBlock) + PAGE_OFFSET_MASK) / PAGE_SIZE;
+    
+    if (heap_end + pages * PAGE_SIZE > HEAP_END) return NULL;
+
     uint32_t old_heap_end = heap_end;
 
     for (uint32_t i = 0; i < pages; i++) {
         int frame = allocPhysicalPage();
         if (frame < 0) return NULL;
-        mapPage(current_pd, heap_end, (uint32_t)frame * 0x1000, PAGE_PRESENT | PAGE_RW);
-        heap_end += 0x1000;
+        mapPage(current_pd, heap_end, (uint32_t)frame * PAGE_SIZE, PAGE_PRESENT | PAGE_RW);
+        heap_end += PAGE_SIZE;
     }
 
     HeapBlock* block = (HeapBlock*)old_heap_end;
     block->magic = HEAP_MAGIC;
-    block->size  = pages * 0x1000 - sizeof(HeapBlock);
+    block->size  = pages * PAGE_SIZE - sizeof(HeapBlock);
     block->free  = 1;
     block->next  = NULL;
     block->prev  = NULL;
@@ -81,17 +85,17 @@ void initHeap(uint32_t heap_start, uint32_t heap_initial_size, uint32_t *pd) {
     heap_end  = heap_start; // Start at the beginning to map correctly
 
     // Map the initial heap area
-    uint32_t pages = (heap_initial_size + 0xFFF) / 0x1000;
+    uint32_t pages = (heap_initial_size + PAGE_OFFSET_MASK) / PAGE_SIZE;
     for (uint32_t i = 0; i < pages; i++) {
         int frame = allocPhysicalPage();
         if (frame >= 0) {
-            mapPage(current_pd, heap_end, (uint32_t)frame * 0x1000, PAGE_PRESENT | PAGE_RW);
-            heap_end += 0x1000;
+            mapPage(current_pd, heap_end, (uint32_t)frame * PAGE_SIZE, PAGE_PRESENT | PAGE_RW);
+            heap_end += PAGE_SIZE;
         }
     }
 
     heap_head->magic = HEAP_MAGIC;
-    heap_head->size  = (pages * 0x1000) - sizeof(HeapBlock);
+    heap_head->size  = (pages * PAGE_SIZE) - sizeof(HeapBlock);
     heap_head->free  = 1;
     heap_head->next  = NULL;
     heap_head->prev  = NULL;

@@ -10,13 +10,26 @@
 #define PAGE_USER      (1 << 2)
 
 #define PAGE_SIZE      4096
-#define PAGE_ALIGN_4K(x) ((x) & 0xFFFFF000)
+#define PAGE_MASK      0xFFFFF000
+#define PAGE_OFFSET_MASK (PAGE_SIZE - 1)
+#define PAGE_ALIGN_4K(x) ((x) & PAGE_MASK)
 #define PDE_COUNT      1024
 #define PTE_COUNT      1024
+#define PT_INDEX_MASK  0x3FF
+#define PAGE_DIR_SHIFT 22
+#define PAGE_TABLE_SHIFT 12
+#define RECURSIVE_PDE_INDEX 1023
+#define KERNEL_STACK_PDE_INDEX 1022
 
 #define VMM_RECURSIVE_PD 0xFFFFF000
 #define VMM_RECURSIVE_PT 0xFFC00000
-#define VMM_SCRATCHPAD   0xC7FFF000
+
+extern char VMM_SCRATCHPAD;
+#define VMM_SCRATCHPAD_ADDR ((uint32_t)&VMM_SCRATCHPAD)
+#undef VMM_SCRATCHPAD
+#define VMM_SCRATCHPAD VMM_SCRATCHPAD_ADDR
+
+extern char KERNEL_STACK_TOP;
 
 extern uint32_t pageDirectory[PDE_COUNT];
 

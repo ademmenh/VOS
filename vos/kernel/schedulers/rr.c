@@ -3,6 +3,7 @@
 #include "schedulers/task.h"
 #include "schedulers/tss.h"
 #include "memory/vmm.h"
+#include "utils/vga.h"
 
 extern void userTrampoline();
 // Set up standard FDs
@@ -27,14 +28,13 @@ void scheduleRR(Scheduler *scheduler) {
         if (candidate->state == TASK_RUNNABLE) {
             Task *prev_task = &scheduler->tasks[scheduler->current_idx];
             if (prev_task == candidate) return; 
-            prev_task->state = TASK_RUNNABLE;
+            if (prev_task->state == TASK_RUNNING) prev_task->state = TASK_RUNNABLE;
             candidate->state = TASK_RUNNING;
             scheduler->current_idx = next_idx;
             uint32_t *prev_esp_ptr = &prev_task->kstack_top;
             uint32_t *next_esp = (uint32_t*)candidate->kstack_top;
             uint32_t next_pd_phys = candidate->pageDirectoryPhys;
-            scheduler->tss->esp0 = (uint32_t)(KERNEL_STACK_PAGE + KSTACK_SIZE);
-            // scheduler->tss->esp0 = candidate->kstack_top;
+            scheduler->tss->esp0 = KERNEL_STACK_TOP_ADDR;
             contextSwitch((uint32_t**)prev_esp_ptr, next_esp, next_pd_phys);
             return;
         }
@@ -62,14 +62,10 @@ int addTaskRR(Scheduler *scheduler, void (*func)(void)) {
     void *user_eip = loadUserCode(t->pageDirectory, (void*)func, USER_CODE_SIZE);
     if (!user_eip) return -1;
     uint32_t phys_top;
-    if (!allocateStack(t->pageDirectory, KERNEL_STACK_PAGE, KSTACK_SIZE, PAGE_RW, &phys_top)) return -1;
+    if (!allocateStack(t->pageDirectory, KERNEL_STACK_BASE, KSTACK_SIZE, PAGE_RW, &phys_top)) return -1;
     uint32_t user_phys_top;
     if (!allocateStack(t->pageDirectory, USER_STACK_PAGE, STACK_SIZE, PAGE_RW | PAGE_USER, &user_phys_top)) return -1;
     t->ustack_top = user_phys_top;
-    uint32_t stack_base_phys = t->ustack_top - STACK_SIZE;
-    for (uint32_t i = 0; i < STACK_SIZE; i += PAGE_SIZE) {
-        mapPage(t->pageDirectory, stack_base_phys + i, stack_base_phys + i, PAGE_RW | PAGE_USER);
-    }
     uint32_t *kernel_top = (uint32_t*)physicalToVirtual(phys_top);
     *(--kernel_top) = 0x23;                                  // SS  (User Data Segment)
     *(--kernel_top) = (uint32_t)(USER_STACK_PAGE + STACK_SIZE); // ESP (User Stack Top - VIRTUAL)
@@ -86,7 +82,7 @@ int addTaskRR(Scheduler *scheduler, void (*func)(void)) {
     *(--kernel_top) = 0;                        // ESI
     *(--kernel_top) = 0;                        // EDI
     uint32_t bytes_pushed = physicalToVirtual(phys_top) - (uint32_t)kernel_top;
-    t->kstack_top = (KERNEL_STACK_PAGE + KSTACK_SIZE - bytes_pushed);
+    t->kstack_top = (KERNEL_STACK_TOP_ADDR - bytes_pushed);
     scheduler->task_count++;
     return t->id;
 }
@@ -94,7 +90,7 @@ int addTaskRR(Scheduler *scheduler, void (*func)(void)) {
 void removeTaskRR(Scheduler *scheduler, int task_id) {
     if (task_id >= 0 && task_id < scheduler->task_count) {
         Task *t = &scheduler->tasks[task_id];
-        deallocateStack(t->pageDirectory, KERNEL_STACK_PAGE, KSTACK_SIZE);
+        deallocateStack(t->pageDirectory, KERNEL_STACK_BASE, KSTACK_SIZE);
         deallocateStack(t->pageDirectory, t->ustack_top - STACK_SIZE, STACK_SIZE);
         t->state = TASK_TERMINATED;
     }

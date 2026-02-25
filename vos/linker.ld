@@ -31,7 +31,11 @@ SECTIONS {
     }
 
     KERNEL_END = .;
+    . = ALIGN(4K);
+    VMM_SCRATCHPAD = .;
+    . += 4K;
 
     . = ALIGN(4K);
     HEAP_START = .;
+    KERNEL_STACK_TOP = 0xFFC00000;
 }
