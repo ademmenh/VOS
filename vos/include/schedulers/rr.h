@@ -5,21 +5,8 @@
 
 void initRR(Scheduler *scheduler);
 
-void scheduleRR(Scheduler *scheduler);
+int getNextTaskRR(Scheduler *scheduler);
 
 void yieldRR(Scheduler *scheduler);
-    
-int addTaskRR(Scheduler *scheduler, const char *filename);
-int addTaskKernelRR(Scheduler *scheduler, void (*func)(void));
-
-void removeTaskRR(Scheduler *scheduler, int task_id);
-
-extern void contextSwitch(uint32_t **prev_esp_ptr, uint32_t *next_esp, uint32_t next_pd_phys);
-
-extern uint32_t getCurrentesp();
-
-extern void taskTrampoline();
-
-extern void userTrampoline();
 
 #endif

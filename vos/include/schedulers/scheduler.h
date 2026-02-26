@@ -10,11 +10,10 @@ typedef struct SchedulerStrategy SchedulerStrategy;
 
 struct SchedulerStrategy {
     void (*init)(Scheduler *scheduler);
-    void (*schedule)(Scheduler *scheduler);
+    int (*getNextTask)(Scheduler *scheduler);
     void (*yield)(Scheduler *scheduler);
-    int (*addTask)(Scheduler *scheduler, const char *filename);
-    int (*addTaskKernel)(Scheduler *scheduler, void (*func)(void));
-    void (*removeTask)(Scheduler *scheduler, int task_id);
+    void (*onTaskAdded)(Scheduler *scheduler, Task *task);
+    void (*onTaskRemoved)(Scheduler *scheduler, Task *task);
 };
 
 struct Scheduler {
@@ -36,6 +35,7 @@ void schedule(Scheduler *scheduler);
 void yield(Scheduler *scheduler);
 
 int addTask(Scheduler *scheduler, const char *filename);
+
 int addTaskKernel(Scheduler *scheduler, void (*func)(void));
 
 void removeTask(Scheduler *scheduler, int task_id);

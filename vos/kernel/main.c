@@ -46,11 +46,10 @@ Task tasks[MAX_TASKS];
 Scheduler scheduler;
 SchedulerStrategy rr_strategy = {
     .init = initRR,
-    .schedule = scheduleRR,
+    .getNextTask = getNextTaskRR,
     .yield = yieldRR,
-    .addTask = addTaskRR,
-    .addTaskKernel = addTaskKernelRR,
-    .removeTask = removeTaskRR 
+    .onTaskAdded = NULL,
+    .onTaskRemoved = NULL
 };
 
 Timer sys_timer;
@@ -331,7 +330,7 @@ int main () {
 
     initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS, pageDirectory, &tss);
     addTaskKernel(&scheduler, test_syscalls_task);
-    // addTask(&scheduler, task1);
-    // addTask(&scheduler, task2);
+    // addTaskKernel(&scheduler, task1);
+    // addTaskKernel(&scheduler, task2);
     while(1);
 }

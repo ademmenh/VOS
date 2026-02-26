@@ -5,14 +5,11 @@
 
 void initPriority(Scheduler *scheduler);
 
-void schedulePriority(Scheduler *scheduler);
+int getNextTaskPriority(Scheduler *scheduler);
 
 void yieldPriority(Scheduler *scheduler);
-    
-int addTaskPriority(Scheduler *scheduler, const char *filename);
-int addTaskKernelPriority(Scheduler *scheduler, void (*func)(void));
 
-void removeTaskPriority(Scheduler *scheduler, int task_id);
+void onTaskAddedPriority(Scheduler *scheduler, Task *task);
 
 void setTaskPriority(Scheduler *scheduler, int task_id, int priority);
 
