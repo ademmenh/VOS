@@ -24,8 +24,13 @@ void yield(Scheduler *scheduler) {
     if (scheduler->strategy && scheduler->strategy->yield) scheduler->strategy->yield(scheduler);
 }
 
-int addTask(Scheduler *scheduler, void (*func)(void)) {
-    if (scheduler->strategy && scheduler->strategy->addTask) return scheduler->strategy->addTask(scheduler, func);
+int addTask(Scheduler *scheduler, const char *filename) {
+    if (scheduler->strategy && scheduler->strategy->addTask) return scheduler->strategy->addTask(scheduler, filename);
+    return -1;
+}
+
+int addTaskKernel(Scheduler *scheduler, void (*func)(void)) {
+    if (scheduler->strategy && scheduler->strategy->addTaskKernel) return scheduler->strategy->addTaskKernel(scheduler, func);
     return -1;
 }
 

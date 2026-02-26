@@ -13,8 +13,8 @@ typedef struct Scheduler Scheduler;
 
 #define USER_VM_START    (0x00100000)
 #define USER_CODE_BASE   USER_VM_START
-#define USER_CODE_SIZE   (2 * PAGE_SIZE)
-#define USER_HEAP_START  (USER_CODE_BASE + USER_CODE_SIZE)
+#define ELF_CODE_SIZE    (1024 * 64) // Nominal size for initial mapping if needed
+#define USER_HEAP_START  (USER_CODE_BASE + 0x1000000) // 16MB gap for ELF segments
 
 #define USER_STACK_TOP   (KERNEL_OFFSET - PAGE_SIZE)
 #define USER_STACK_SIZE  (PAGE_SIZE * 2)
@@ -61,6 +61,5 @@ typedef struct Task {
 
 void *allocateStack(uint32_t *pd, uint32_t virt_start, uint32_t size, uint32_t flags, uint32_t *phys_top_out);
 void deallocateStack(uint32_t *pd, uint32_t virt_start, uint32_t size);
-void *loadUserCode(uint32_t *pd, void *func, uint32_t size);
 
 #endif

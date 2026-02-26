@@ -12,7 +12,8 @@ struct SchedulerStrategy {
     void (*init)(Scheduler *scheduler);
     void (*schedule)(Scheduler *scheduler);
     void (*yield)(Scheduler *scheduler);
-    int (*addTask)(Scheduler *scheduler, void (*func)(void));
+    int (*addTask)(Scheduler *scheduler, const char *filename);
+    int (*addTaskKernel)(Scheduler *scheduler, void (*func)(void));
     void (*removeTask)(Scheduler *scheduler, int task_id);
 };
 
@@ -34,7 +35,8 @@ void schedule(Scheduler *scheduler);
 
 void yield(Scheduler *scheduler);
 
-int addTask(Scheduler *scheduler, void (*func)(void));
+int addTask(Scheduler *scheduler, const char *filename);
+int addTaskKernel(Scheduler *scheduler, void (*func)(void));
 
 void removeTask(Scheduler *scheduler, int task_id);
 

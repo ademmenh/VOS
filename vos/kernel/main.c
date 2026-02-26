@@ -18,6 +18,7 @@
 #include "utils/string.h"
 #include "syscalls/int.h"
 #include "syscalls/handler.h"
+#include "utils/elf.h"
 
 #define GDT_LENGTH 6
 #define IDT_LENGTH 256
@@ -45,6 +46,7 @@ SchedulerStrategy rr_strategy = {
     .schedule = scheduleRR,
     .yield = yieldRR,
     .addTask = addTaskRR,
+    .addTaskKernel = addTaskKernelRR,
     .removeTask = removeTaskRR 
 };
 
@@ -289,8 +291,46 @@ int main () {
     // uint32_t var = 0x12345678;
     // printf("var: %p\n", &var);
 
+    // Mock ELF Verification
+    VfsNode* bin_dir = createVfsNode(ramfs_root, "bin", VFS_TYPE_DIRECTORY);
+    if (bin_dir) {
+        VfsNode* elf_file = createVfsNode(bin_dir, "test", VFS_TYPE_FILE);
+        if (elf_file) {
+            Elf32Ehdr ehdr;
+            memset(&ehdr, 0, sizeof(ehdr));
+            ehdr.e_ident[EI_MAG0] = ELF_MAG0;
+            ehdr.e_ident[EI_MAG1] = ELF_MAG1;
+            ehdr.e_ident[EI_MAG2] = ELF_MAG2;
+            ehdr.e_ident[EI_MAG3] = ELF_MAG3;
+            ehdr.e_ident[EI_CLASS] = ELFCLASS32;
+            ehdr.e_type = ET_EXEC;
+            ehdr.e_phoff = sizeof(Elf32Ehdr);
+            ehdr.e_phnum = 1;
+            ehdr.e_phentsize = sizeof(Elf32Phdr);
+            ehdr.e_entry = 0x100000;
+
+            Elf32Phdr phdr;
+            memset(&phdr, 0, sizeof(phdr));
+            phdr.p_type = PT_LOAD;
+            phdr.p_offset = sizeof(Elf32Ehdr) + sizeof(Elf32Phdr);
+            phdr.p_vaddr = 0x100000;
+            phdr.p_memsz = PAGE_SIZE;
+            phdr.p_filesz = 4; 
+            phdr.p_flags = PF_R | PF_X;
+
+            uint8_t code[] = { 0xF4, 0xEB, 0xFD, 0x00 }; // hlt, jmp -2
+
+            writeVfsNode(elf_file, 0, sizeof(Elf32Ehdr), (uint8_t*)&ehdr);
+            writeVfsNode(elf_file, sizeof(Elf32Ehdr), sizeof(Elf32Phdr), (uint8_t*)&phdr);
+            writeVfsNode(elf_file, sizeof(Elf32Ehdr) + sizeof(Elf32Phdr), sizeof(code), code);
+
+            printk("Loading mock ELF /bin/test...\n");
+            addTask(&scheduler, "/bin/test");
+        }
+    }
+
     initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS, pageDirectory, &tss);
-    addTask(&scheduler, test_syscalls_task);
+    addTaskKernel(&scheduler, test_syscalls_task);
     // addTask(&scheduler, task1);
     // addTask(&scheduler, task2);
     while(1);

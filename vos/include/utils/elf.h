@@ -81,4 +81,7 @@ typedef struct {
 	Elf32_Word		p_align;			// Segment alignment in memory and file
 } Elf32Phdr;
 
+struct Task;
+int loadElf(struct Task *task, const char *path, uint32_t *entry_out);
+
 #endif
