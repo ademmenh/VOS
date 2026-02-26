@@ -1,5 +1,6 @@
 #include "stdint.h"
 #include "utils/vga.h"
+#include "devices/tty.h"
 #include "utils/asm.h"
 #include "memory/vmm.h"
 #include "kernel_stdarg.h"
@@ -259,11 +260,20 @@ int writeVga(const uint8_t *buffer, uint32_t size, uint8_t color) {
 }
 
 int readFromVgaNode(VfsNode *node, uint32_t offset, uint32_t size, uint8_t *buffer) {
-    return readVga(buffer, size);
+    TTY *tty = (TTY*)node->internal;
+    if (!tty) return -1;
+
+    uint32_t read = 0;
+    while (read < size) {
+        if (tty->input_head == tty->input_tail) {
+            break; // Buffer empty
+        }
+        buffer[read++] = tty->input_buffer[tty->input_tail];
+        tty->input_tail = (tty->input_tail + 1) % TTY_BUFFER_SIZE;
+    }
+    return (int)read;
 }
 
 int writeToVgaNode(VfsNode *node, uint32_t offset, uint32_t size, uint8_t *buffer) {
-    uint8_t color = (uint8_t)(uintptr_t)node->internal;
-    if (color == 0) color = COLOR8_WHITE; // Default
-    return writeVga(buffer, size, color);
+    return writeVga(buffer, size, COLOR8_WHITE);
 }

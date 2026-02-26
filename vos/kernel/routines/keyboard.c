@@ -2,6 +2,7 @@
 #include "routines/keyboard.h"
 #include "utils/io.h"
 #include "utils/vga.h"
+#include "utils/input.h"
 
 Keyboard *keyboard;
 
@@ -50,8 +51,9 @@ void handleKeyboard(InterruptRegisters *regs) {
     // Only on key press
     if (!released) {
         char asciiChar = scanCodeToAscii(key);
-        if (asciiChar)
-            printk("%c", asciiChar);
+        if (asciiChar) {
+            dispatchInput(asciiChar);
+        }
     }
 }
 

@@ -19,11 +19,14 @@
 #include "syscalls/int.h"
 #include "syscalls/handler.h"
 #include "utils/elf.h"
+#include "devices/tty.h"
+#include "utils/input.h"
 
 #define GDT_LENGTH 6
 #define IDT_LENGTH 256
 #define MAX_TASKS 256
 
+extern VfsOps vga_ops;
 extern uint32_t KERNEL_START;
 extern uint32_t KERNEL_END;
 extern uint32_t HEAP_START;
@@ -72,18 +75,8 @@ IRQHandler irq_routines[16] = {
 };
 
 VfsMount* vfs_root = NULL;
-VfsOps vga_ops = {
-    .openNode = NULL,
-    .closeNode = NULL,
-    .readNode = readFromVgaNode,
-    .writeNode = writeToVgaNode,
-    .lookupNode = NULL,
-    .createNode = NULL
-};
-
-VfsNode vga_stdout_node;
-VfsNode vga_stderr_node;
-VfsNode vga_stdin_node;
+VfsNode vga_node;
+TTY system_tty;
 
 int main () {
     // init TSS
@@ -181,7 +174,6 @@ int main () {
     initKeyboard(&sys_keyboard);
     installIRQ(&irq_routines[1], handleKeyboard);
     sti();
-    sti();
 
     // printk("pageDirectory address: %p\n", pageDirectory);
     // printk("pageTable address: %p\n", pageTable);
@@ -236,39 +228,34 @@ int main () {
     VfsNode* ramfs_root = getRamfsRootNode();
     mountVfsRoot(&vfs_root, ramfs_root);
 
+    // Initialize TTY
+    initTty(&system_tty);
+
+    // Initialize Input Routing
+    initInputSystem();
+    registerInputSubscriber(handleTtyInput, &vga_node);
+
     // Initialize VGA nodes
-    memset(&vga_stdout_node, 0, sizeof(VfsNode));
-    strcpy(vga_stdout_node.name, "tty0");
-    vga_stdout_node.type = VFS_TYPE_CHAR_DEVICE;
-    vga_stdout_node.ops = &vga_ops;
-    vga_stdout_node.internal = (void*)(uintptr_t)COLOR8_WHITE;
+    memset(&vga_node, 0, sizeof(VfsNode));
+    strcpy(vga_node.name, "tty");
+    vga_node.type = VFS_TYPE_CHAR_DEVICE;
+    vga_node.ops = &vga_ops;
+    vga_node.internal = &system_tty;
 
-    memset(&vga_stderr_node, 0, sizeof(VfsNode));
-    strcpy(vga_stderr_node.name, "tty0_err"); // Internal name
-    vga_stderr_node.type = VFS_TYPE_CHAR_DEVICE;
-    vga_stderr_node.ops = &vga_ops;
-    vga_stderr_node.internal = (void*)(uintptr_t)COLOR8_RED;
-
-    memset(&vga_stdin_node, 0, sizeof(VfsNode));
-    strcpy(vga_stdin_node.name, "tty0_in"); // Internal name
-    vga_stdin_node.type = VFS_TYPE_CHAR_DEVICE;
-    vga_stdin_node.ops = &vga_ops;
-    vga_stdin_node.internal = (void*)(uintptr_t)COLOR8_WHITE;
-
-    // inside ifs check with !, and print the errors
-    // Create /dev/tty0
+    // Create /dev/tty
     VfsNode* dev_dir = createVfsNode(ramfs_root, "dev", VFS_TYPE_DIRECTORY);
     if (!dev_dir) {
         printk("Failed to create /dev directory\n");
         return -1;
     }
-    VfsNode* tty0 = createVfsNode(dev_dir, "tty0", VFS_TYPE_CHAR_DEVICE);
-    if (!tty0) {
-        printk("Failed to create /dev/tty0\n");
+    VfsNode* tty = createVfsNode(dev_dir, "tty", VFS_TYPE_CHAR_DEVICE);
+    if (!tty) {
+        printk("Failed to create /dev/tty\n");
         return -1;
     }
-    tty0->ops = &vga_ops;
-    tty0->internal = (void*)(uintptr_t)COLOR8_WHITE;
+    tty->ops = &vga_ops;
+    tty->internal = &system_tty;
+
     // Testing VFS
     // VfsNode* dev  = createVfsNode(ramfs_root, "dev", VFS_TYPE_DIRECTORY);
     // // Create /hello.txt

@@ -12,8 +12,7 @@
 
 extern void userTrampoline();
 // Set up standard FDs
-extern VfsNode vga_stdout_node;
-extern VfsNode vga_stderr_node;
+extern VfsNode vga_node;
 
 void initRR(Scheduler *scheduler) {
     Task *task = scheduler->tasks;
@@ -58,9 +57,9 @@ int addTaskKernelRR(Scheduler *scheduler, void (*func)(void)) {
     t->state = TASK_RUNNABLE;
     initFDT(t->fd_table);
     
-    t->fd_table[STDOUT_FILENO].node = &vga_stdout_node;
+    t->fd_table[STDOUT_FILENO].node = &vga_node;
     t->fd_table[STDOUT_FILENO].flags = FD_FLAG_WRITE;
-    t->fd_table[STDERR_FILENO].node = &vga_stderr_node;
+    t->fd_table[STDERR_FILENO].node = &vga_node;
     t->fd_table[STDERR_FILENO].flags = FD_FLAG_WRITE;
 
     createTaskPageStructures(&(t->pageDirectory), &(t->pageDirectoryPhys));
@@ -114,9 +113,9 @@ int addTaskRR(Scheduler *scheduler, const char *filename) {
     t->state = TASK_RUNNABLE;
     initFDT(t->fd_table);
     
-    t->fd_table[STDOUT_FILENO].node = &vga_stdout_node;
+    t->fd_table[STDOUT_FILENO].node = &vga_node;
     t->fd_table[STDOUT_FILENO].flags = FD_FLAG_WRITE;
-    t->fd_table[STDERR_FILENO].node = &vga_stderr_node;
+    t->fd_table[STDERR_FILENO].node = &vga_node;
     t->fd_table[STDERR_FILENO].flags = FD_FLAG_WRITE;
 
     createTaskPageStructures(&(t->pageDirectory), &(t->pageDirectoryPhys));
