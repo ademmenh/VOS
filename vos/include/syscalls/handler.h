@@ -16,6 +16,19 @@
 #define SYS_SYMLINK   7
 #define SYS_READLINK  8
 #define SYS_EXIT      9
+#define SYS_MMAP      10
+#define SYS_MUNMAP     11
+#define SYS_SBRK      12
+
+#define PROT_NONE  0x0
+#define PROT_READ  0x1
+#define PROT_WRITE 0x2
+#define PROT_EXEC  0x4
+
+#define MAP_SHARED    0x01
+#define MAP_PRIVATE   0x02
+#define MAP_FIXED     0x10
+#define MAP_ANONYMOUS 0x20
 
 void handleSyscall(InterruptRegisters *regs);
 
@@ -29,5 +42,8 @@ int sys_lstat(const char *path, struct StatBuf *buf);
 int sys_symlink(const char *target, const char *linkpath);
 int sys_readlink(const char *path, char *buf, int bufsiz);
 int sys_exit(int status);
+void *sys_mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t offset);
+int sys_munmap(void *addr, uint32_t length);
+void *sys_sbrk(int increment);
 
 #endif

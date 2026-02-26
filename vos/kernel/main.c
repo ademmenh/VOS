@@ -291,7 +291,7 @@ int main () {
 
     initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS, pageDirectory, &tss);
     addTask(&scheduler, test_syscalls_task);
-    addTask(&scheduler, task1);
-    addTask(&scheduler, task2);
+    // addTask(&scheduler, task1);
+    // addTask(&scheduler, task2);
     while(1);
 }

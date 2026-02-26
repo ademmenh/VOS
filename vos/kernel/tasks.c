@@ -2,6 +2,7 @@
 #include "syscalls/handler.h"
 #include "storage/vfs.h"
 #include "schedulers/fdt.h"
+#include "memory/vmm.h"
 
 void test_syscalls_task(void) {
     int80(SYS_WRITE, 1, (int)"Starting syscall tests...\n", 26);
@@ -112,6 +113,34 @@ void test_syscalls_task(void) {
     } else {
         int80(SYS_WRITE, 1, (int)"Test Fail: create rel link\n", 27);
     }
+    
+    // 11. Mmap test
+    int80(SYS_WRITE, 1, (int)"Testing mmap...\n", 16);
+    void *mmap_ptr = (void*)int80_6(SYS_MMAP, 0, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if ((int)mmap_ptr == -1) {
+        int80(SYS_WRITE, 1, (int)"Test Fail: mmap\n", 16);
+        while(1);
+    }
+    int80(SYS_WRITE, 1, (int)"Test Pass: mmap\n", 16);
+
+    // 13. Sbrk test
+    int80(SYS_WRITE, 1, (int)"Testing sbrk...\n", 16);
+    void *initial_break = (void*)int80(SYS_SBRK, 0, 0, 0);
+    void *new_break = (void*)int80(SYS_SBRK, PAGE_SIZE, 0, 0);
+    if ((int)initial_break == -1 || (int)new_break == -1) {
+        int80(SYS_WRITE, 1, (int)"Test Fail: sbrk allocate\n", 25);
+        while(1);
+    }
+    char *heap_ptr = (char*)initial_break;
+    heap_ptr[0] = 'H';
+    heap_ptr[1] = 'E';
+    heap_ptr[2] = 'A';
+    heap_ptr[3] = 'P';
+    if (heap_ptr[0] != 'H' || heap_ptr[3] != 'P') {
+        int80(SYS_WRITE, 1, (int)"Test Fail: sbrk read/write\n", 27);
+        while(1);
+    }
+    int80(SYS_WRITE, 1, (int)"Test Pass: sbrk\n", 16);
 
     int80(SYS_WRITE, 1, (int)"ALL SYSCALL TESTS PASSED!\n", 26);
     int80(SYS_EXIT, 0, 0, 0);

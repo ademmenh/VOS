@@ -46,7 +46,7 @@ void *loadUserCode(uint32_t *pd, void *func, uint32_t size) {
         int frame = allocPhysicalPage();
         if (frame < 0) return NULL;
         uint32_t phys = (uint32_t)frame * PAGE_SIZE;
-        uint32_t virt = USER_CODE_PAGE + (i * PAGE_SIZE);
+        uint32_t virt = USER_CODE_BASE + (i * PAGE_SIZE);
         
         mapPage(pd, virt, phys, PAGE_RW | PAGE_USER);
         
@@ -61,5 +61,5 @@ void *loadUserCode(uint32_t *pd, void *func, uint32_t size) {
         }
     }
     
-    return (void*)USER_CODE_PAGE;
+    return (void*)USER_CODE_BASE;
 }

@@ -4,6 +4,7 @@
 typedef int (*Syscall3)(int, int, int);
 typedef int (*Syscall2)(int, int);
 typedef int (*Syscall1)(int);
+typedef void* (*Syscall6)(uint32_t, uint32_t, int, int, int, uint32_t);
 
 void *syscalls[MAX_SYSCALLS] = {
     [SYS_READ]  = sys_read,
@@ -16,6 +17,9 @@ void *syscalls[MAX_SYSCALLS] = {
     [SYS_SYMLINK] = sys_symlink,
     [SYS_READLINK] = sys_readlink,
     [SYS_EXIT] = sys_exit,
+    [SYS_MMAP] = sys_mmap,
+    [SYS_MUNMAP] = sys_munmap,
+    [SYS_SBRK] = sys_sbrk,
 };
 
 void handleSyscall(InterruptRegisters *regs) {
@@ -32,12 +36,15 @@ void handleSyscall(InterruptRegisters *regs) {
 
     int ret = 0;
     
-    if (regs->eax == SYS_READ || regs->eax == SYS_WRITE || regs->eax == SYS_OPEN || regs->eax == SYS_READLINK) {
+    if (regs->eax == SYS_MMAP) {
+        Syscall6 sc = (Syscall6)location;
+        ret = (int)sc(regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi, regs->ebp);
+    } else if (regs->eax == SYS_READ || regs->eax == SYS_WRITE || regs->eax == SYS_OPEN || regs->eax == SYS_READLINK) {
         Syscall3 sc = (Syscall3)location;
         ret = sc(regs->ebx, regs->ecx, regs->edx);
-    } else if (regs->eax == SYS_CLOSE || regs->eax == SYS_EXIT) {
+    } else if (regs->eax == SYS_CLOSE || regs->eax == SYS_EXIT || regs->eax == SYS_MUNMAP || regs->eax == SYS_SBRK) {
         Syscall1 sc = (Syscall1)location;
-        ret = sc(regs->ebx);
+        ret = (int)sc(regs->ebx);
     } else if (regs->eax == SYS_STAT || regs->eax == SYS_FSTAT || regs->eax == SYS_LSTAT || regs->eax == SYS_SYMLINK) {
         Syscall2 sc = (Syscall2)location;
         ret = sc(regs->ebx, regs->ecx);

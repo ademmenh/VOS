@@ -3,6 +3,9 @@
 #include "schedulers/task.h"
 #include "schedulers/tss.h"
 #include "memory/vmm.h"
+#include "memory/heap.h"
+#include "memory/vma.h"
+#include "syscalls/handler.h"
 #include "utils/vga.h"
 
 extern void userTrampoline();
@@ -61,14 +64,21 @@ int addTaskRR(Scheduler *scheduler, void (*func)(void)) {
     createTaskPageStructures(&(t->pageDirectory), &(t->pageDirectoryPhys));
     void *user_eip = loadUserCode(t->pageDirectory, (void*)func, USER_CODE_SIZE);
     if (!user_eip) return -1;
+    // Initialize Heap (right after code)
+    t->heap_start = USER_HEAP_START;
+    t->heap_break = t->heap_start;
     uint32_t phys_top;
     if (!allocateStack(t->pageDirectory, KERNEL_STACK_BASE, KSTACK_SIZE, PAGE_RW, &phys_top)) return -1;
     uint32_t user_phys_top;
-    if (!allocateStack(t->pageDirectory, USER_STACK_PAGE, STACK_SIZE, PAGE_RW | PAGE_USER, &user_phys_top)) return -1;
-    t->ustack_top = user_phys_top;
+    if (!allocateStack(t->pageDirectory, USER_STACK_BASE, USER_STACK_SIZE, PAGE_RW | PAGE_USER, &user_phys_top)) return -1;
+    t->ustack_top = USER_STACK_TOP;
+    // Create initial VMAs using add_vma (ensures sorted order)
+    addVma(t, USER_CODE_BASE, USER_CODE_SIZE, PROT_READ | PROT_EXEC, MAP_PRIVATE);
+    addVma(t, USER_STACK_BASE, USER_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE);
+    addVma(t, t->heap_start, 0, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS);
     uint32_t *kernel_top = (uint32_t*)physicalToVirtual(phys_top);
     *(--kernel_top) = 0x23;                                  // SS  (User Data Segment)
-    *(--kernel_top) = (uint32_t)(USER_STACK_PAGE + STACK_SIZE); // ESP (User Stack Top - VIRTUAL)
+    *(--kernel_top) = (uint32_t)USER_STACK_TOP; // ESP (User Stack Top - VIRTUAL)
     *(--kernel_top) = 0x202;                                 // EFLAGS (IF=1)
     *(--kernel_top) = 0x1B;                                  // CS  (User Code Segment)
     *(--kernel_top) = (uint32_t)user_eip;                    // EIP (user-space code)
@@ -91,7 +101,15 @@ void removeTaskRR(Scheduler *scheduler, int task_id) {
     if (task_id >= 0 && task_id < scheduler->task_count) {
         Task *t = &scheduler->tasks[task_id];
         deallocateStack(t->pageDirectory, KERNEL_STACK_BASE, KSTACK_SIZE);
-        deallocateStack(t->pageDirectory, t->ustack_top - STACK_SIZE, STACK_SIZE);
+        deallocateStack(t->pageDirectory, USER_STACK_BASE, USER_STACK_SIZE);
+        // Free VMAs
+        Vma *curr = t->vma_list;
+        while (curr) {
+            Vma *next = curr->next;
+            kfree(curr);
+            curr = next;
+        }
+        t->vma_list = NULL;
         t->state = TASK_TERMINATED;
     }
 }
