@@ -75,9 +75,9 @@ int loadElf(Task *task, const char *path, uint32_t *entry_out) {
             uint32_t offset_in_page = vaddr & PAGE_OFFSET_MASK;
             uint32_t total_size = (memsz + offset_in_page + PAGE_OFFSET_MASK) & PAGE_MASK;
             // Register VMA
-            addVma(task, vaddr_aligned, total_size, elf_to_prot_flags(phdr.p_flags), MAP_PRIVATE);
+            addVma(task, vaddr_aligned, total_size, elfToProtFlags(phdr.p_flags), MAP_PRIVATE);
             // Allocate and map pages
-            uint32_t vmm_flags = elf_to_vmm_flags(phdr.p_flags);
+            uint32_t vmm_flags = elfToVmmFlags(phdr.p_flags);
             for (uint32_t v = 0; v < total_size; v += PAGE_SIZE) {
                 int frame = allocPhysicalPage();
                 if (frame < 0) return -1;

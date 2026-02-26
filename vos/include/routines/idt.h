@@ -21,6 +21,7 @@ typedef struct {
     uint32_t edi, esi, ebp, esp_dummy, ebx, edx, ecx, eax;
     uint32_t int_no, err_code;
     uint32_t eip, cs, eflags;
+    uint32_t useresp, ss;
 } InterruptRegisters;
 
 typedef void (*IRQHandler)(InterruptRegisters *regs);

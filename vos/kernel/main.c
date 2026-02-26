@@ -315,17 +315,30 @@ int main () {
             phdr.p_offset = sizeof(Elf32Ehdr) + sizeof(Elf32Phdr);
             phdr.p_vaddr = 0x100000;
             phdr.p_memsz = PAGE_SIZE;
-            phdr.p_filesz = 4; 
+            phdr.p_filesz = 64; 
             phdr.p_flags = PF_R | PF_X;
 
-            uint8_t code[] = { 0xF4, 0xEB, 0xFD, 0x00 }; // hlt, jmp -2
+            uint8_t binary[64];
+            memset(binary, 0, 64);
+            uint8_t code[] = {
+                0xB8, 0x01, 0x00, 0x00, 0x00, // mov eax, 1 (SYS_WRITE)
+                0xBB, 0x01, 0x00, 0x00, 0x00, // mov ebx, 1 (stdout)
+                0xB9, 0x22, 0x00, 0x10, 0x00, // mov ecx, 0x100022 (msg addr)
+                0xBA, 0x0E, 0x00, 0x00, 0x00, // mov edx, 14 (len)
+                0xCD, 0x80,                   // int 0x80
+                0xB8, 0x09, 0x00, 0x00, 0x00, // mov eax, 9 (SYS_EXIT)
+                0xBB, 0x00, 0x00, 0x00, 0x00, // mov ebx, 0
+                0xCD, 0x80                    // int 0x80
+            };
+            memcpy(binary, code, sizeof(code));
+            memcpy(binary + 0x22, "ELF EXEC OK!\n\0", 14);
 
             writeVfsNode(elf_file, 0, sizeof(Elf32Ehdr), (uint8_t*)&ehdr);
             writeVfsNode(elf_file, sizeof(Elf32Ehdr), sizeof(Elf32Phdr), (uint8_t*)&phdr);
-            writeVfsNode(elf_file, sizeof(Elf32Ehdr) + sizeof(Elf32Phdr), sizeof(code), code);
+            writeVfsNode(elf_file, sizeof(Elf32Ehdr) + sizeof(Elf32Phdr), 64, binary);
 
-            printk("Loading mock ELF /bin/test...\n");
-            addTask(&scheduler, "/bin/test");
+            printk("Registered mock ELF /bin/test\n");
+            // addTask(&scheduler, "/bin/test"); // Will be called via sys_exec
         }
     }
 

@@ -19,6 +19,7 @@
 #define SYS_MMAP      10
 #define SYS_MUNMAP     11
 #define SYS_SBRK      12
+#define SYS_EXEC      13
 
 #define PROT_NONE  0x0
 #define PROT_READ  0x1
@@ -45,5 +46,6 @@ int sys_exit(int status);
 void *sys_mmap(void *addr, uint32_t length, int prot, int flags, int fd, uint32_t offset);
 int sys_munmap(void *addr, uint32_t length);
 void *sys_sbrk(int increment);
+int sys_exec(const char *path, InterruptRegisters *regs);
 
 #endif

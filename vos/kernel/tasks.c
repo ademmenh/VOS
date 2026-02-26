@@ -144,6 +144,9 @@ void test_syscalls_task(void) {
 
     int80(SYS_WRITE, 1, (int)"ALL SYSCALL TESTS PASSED!\n", 26);
     
+    int80(SYS_WRITE, 1, (int)"Executing /bin/test...\n", 23);
+    int80(SYS_EXEC, (int)"/bin/test", 0, 0);
+
     int80(SYS_EXIT, 0, 0, 0);
 }
 

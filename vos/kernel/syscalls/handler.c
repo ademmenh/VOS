@@ -20,6 +20,7 @@ void *syscalls[MAX_SYSCALLS] = {
     [SYS_MMAP] = sys_mmap,
     [SYS_MUNMAP] = sys_munmap,
     [SYS_SBRK] = sys_sbrk,
+    [SYS_EXEC] = sys_exec,
 };
 
 void handleSyscall(InterruptRegisters *regs) {
@@ -48,6 +49,9 @@ void handleSyscall(InterruptRegisters *regs) {
     } else if (regs->eax == SYS_STAT || regs->eax == SYS_FSTAT || regs->eax == SYS_LSTAT || regs->eax == SYS_SYMLINK) {
         Syscall2 sc = (Syscall2)location;
         ret = sc(regs->ebx, regs->ecx);
+    } else if (regs->eax == SYS_EXEC) {
+        int (*sc)(const char*, InterruptRegisters*) = (int (*)(const char*, InterruptRegisters*))location;
+        ret = sc((const char*)regs->ebx, regs);
     }
 
     regs->eax = ret;
