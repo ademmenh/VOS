@@ -141,12 +141,30 @@ void test_syscalls_task(void) {
         while(1);
     }
     int80(SYS_WRITE, 1, (int)"Test Pass: sbrk\n", 16);
-
-    int80(SYS_WRITE, 1, (int)"ALL SYSCALL TESTS PASSED!\n", 26);
     
-    int80(SYS_WRITE, 1, (int)"Executing /bin/test...\n", 23);
-    int80(SYS_EXEC, (int)"/bin/test", 0, 0);
+    // 14. Fork test
+    int80(SYS_WRITE, 1, (int)"Testing fork...\n", 16);
+    int pid = int80(SYS_FORK, 0, 0, 0);
+    if (pid < 0) {
+        int80(SYS_WRITE, 1, (int)"Test Fail: fork\n", 16);
+        while(1);
+    } else if (pid == 0) {
+        // Child
+        int80(SYS_WRITE, 1, (int)"Hello from child!\n", 18);
+        int80(SYS_EXIT, 0, 0, 0);
+    } else {
+        // Parent
+        int80(SYS_WRITE, 1, (int)"Hello from parent, child PID: ", 30);
+        char pid_char = (char)('0' + pid);
+        int80(SYS_WRITE, 1, (int)&pid_char, 1);
+        int80(SYS_WRITE, 1, (int)"\n", 1);
+    }
+    int80(SYS_WRITE, 1, (int)"Test Pass: fork\n", 16);
 
+    int80(SYS_WRITE, 1, (int)"Executing /bin/test with args...\n", 33);
+    char *argv[] = {"/bin/test", "hello", "world", NULL};
+    int80(SYS_EXECVE, (int)"/bin/test", (int)argv, 0);
+    int80(SYS_WRITE, 1, (int)"ALL SYSCALL TESTS PASSED!\n", 26);
     int80(SYS_EXIT, 0, 0, 0);
 }
 

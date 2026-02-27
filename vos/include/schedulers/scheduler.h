@@ -40,4 +40,6 @@ int addTaskKernel(Scheduler *scheduler, void (*func)(void));
 
 void removeTask(Scheduler *scheduler, int task_id);
 
+int cloneTask(Scheduler *scheduler, Task *parent, InterruptRegisters *regs);
+
 #endif

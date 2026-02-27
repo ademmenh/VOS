@@ -10,53 +10,127 @@
 
 extern Scheduler scheduler;
 
-int sys_exec(const char *path, InterruptRegisters *regs) {
+int sys_execve(const char *path, char *const argv[], char *const envp[], InterruptRegisters *regs) {
     Task *task = &scheduler.tasks[scheduler.current_idx];
-    // 1. free user-space VMA
-    Vma *curr = task->vma_list;
-    while (curr) {
-        for (uint32_t a = curr->virt_addr; a < curr->virt_addr + curr->size; a += PAGE_SIZE) {
+    
+    // 1. Save arguments to kernel memory before freeing user space
+    int argc = 0;
+    if (argv) while (argv[argc]) argc++;
+    char **kargv = NULL;
+    if (argc > 0) {
+        kargv = (char**)kmalloc(argc * sizeof(char*));
+        for (int i = 0; i < argc; i++) kargv[i] = kstrdup(argv[i]);
+    }
+
+    int envc = 0;
+    if (envp) while (envp[envc]) envc++;
+    char **kenvp = NULL;
+    if (envc > 0) {
+        kenvp = (char**)kmalloc(envc * sizeof(char*));
+        for (int i = 0; i < envc; i++) kenvp[i] = kstrdup(envp[i]);
+    }
+
+    // 2. Free user-space VMAs
+    Vma *curr_vma = task->vma_list;
+    while (curr_vma) {
+        Vma *next = curr_vma->next;
+        for (uint32_t a = curr_vma->virt_addr; a < curr_vma->virt_addr + curr_vma->size; a += PAGE_SIZE) {
             unmapPage(task->pageDirectory, a);
         }
-        Vma *next = curr->next;
-        kfree(curr);
-        curr = next;
+        kfree(curr_vma);
+        curr_vma = next;
     }
     task->vma_list = NULL;
 
-    // 2. Load the new ELF binary
+    // 3. Load the new ELF binary
     uint32_t entry;
     if (loadElf(task, path, &entry) < 0) {
-        printk("sys_exec: Failed to load ELF %s\n", path);
-        sys_exit(-1); // Terminate the task if loading fails
+        printk("sys_execve: Failed to load ELF %s\n", path);
+        // Cleanup kernel buffers if failed
+        if (kargv) {
+            for (int i = 0; i < argc; i++) kfree(kargv[i]);
+            kfree(kargv);
+        }
+        if (kenvp) {
+            for (int i = 0; i < envc; i++) kfree(kenvp[i]);
+            kfree(kenvp);
+        }
+        sys_exit(-1);
         return -1;
     }
 
-    // 3. Re-initialize Heap VMA
+    // 4. Re-initialize structures
     task->heap_start = USER_HEAP_START;
     task->heap_break = task->heap_start;
     addVma(task, task->heap_start, 0, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS);
 
-    // 4. Re-initialize User Stack VMA and mapping
     uint32_t user_phys_top;
     if (!allocateStack(task->pageDirectory, USER_STACK_BASE, USER_STACK_SIZE, PAGE_RW | PAGE_USER, &user_phys_top)) {
-        printk("sys_exec: Failed to allocate user stack\n");
         sys_exit(-1);
         return -1;
     }
     task->ustack_top = USER_STACK_TOP;
     addVma(task, USER_STACK_BASE, USER_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE);
 
-    // 5. Update registers to jump to the new entry point upon return
+    // 5. Push arguments to user stack
+    uint32_t esp = USER_STACK_TOP;
+    uint32_t *uargv_ptrs = (uint32_t*)kmalloc(argc * sizeof(uint32_t));
+    uint32_t *uenvp_ptrs = (uint32_t*)kmalloc(envc * sizeof(uint32_t));
+
+    // Copy envp strings
+    for (int i = envc - 1; i >= 0; i--) {
+        size_t len = strlen(kenvp[i]) + 1;
+        esp -= len;
+        memcpy((void*)esp, kenvp[i], len);
+        uenvp_ptrs[i] = esp;
+        kfree(kenvp[i]);
+    }
+    if (kenvp) kfree(kenvp);
+
+    // Copy argv strings
+    for (int i = argc - 1; i >= 0; i--) {
+        size_t len = strlen(kargv[i]) + 1;
+        esp -= len;
+        memcpy((void*)esp, kargv[i], len);
+        uargv_ptrs[i] = esp;
+        kfree(kargv[i]);
+    }
+    if (kargv) kfree(kargv);
+
+    // Align stack
+    esp &= ~0x3;
+
+    // Push ptrs
+    esp -= 4; *(uint32_t*)esp = 0; // envp NULL
+    for (int i = envc - 1; i >= 0; i--) {
+        esp -= 4; *(uint32_t*)esp = uenvp_ptrs[i];
+    }
+    uint32_t uenvp = esp;
+
+    esp -= 4; *(uint32_t*)esp = 0; // argv NULL
+    for (int i = argc - 1; i >= 0; i--) {
+        esp -= 4; *(uint32_t*)esp = uargv_ptrs[i];
+    }
+    uint32_t uargv = esp;
+
+    kfree(uargv_ptrs);
+    kfree(uenvp_ptrs);
+
+    // Initial stack frame for main(argc, argv, envp)
+    esp -= 4; *(uint32_t*)esp = uenvp;
+    esp -= 4; *(uint32_t*)esp = uargv;
+    esp -= 4; *(uint32_t*)esp = (uint32_t)argc;
+    esp -= 4; *(uint32_t*)esp = 0; // dummy return address
+
+    // 6. Update registers
     regs->eip = entry;
-    regs->useresp = USER_STACK_TOP;
+    regs->useresp = esp;
     regs->cs = 0x1B;
     regs->ss = 0x23;
     regs->ds = 0x23;
     regs->es = 0x23;
     regs->fs = 0x23;
     regs->gs = 0x23;
-    // Clear general purpose registers for the new process
     regs->eax = 0;
     regs->ebx = 0;
     regs->ecx = 0;

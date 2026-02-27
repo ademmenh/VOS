@@ -9,6 +9,7 @@
 #include "memory/pmm.h"
 #include "utils/elf.h"
 #include "syscalls/handler.h"
+#include "utils/asm.h"
 
 extern void contextSwitch(uint32_t **prev_esp_ptr, uint32_t *next_esp, uint32_t next_pd_phys);
 extern void userTrampoline();
@@ -207,4 +208,86 @@ void removeTask(Scheduler *scheduler, int task_id) {
 
         t->state = TASK_TERMINATED;
     }
+}
+
+int cloneTask(Scheduler *scheduler, Task *parent, InterruptRegisters *regs) {
+    if (scheduler->task_count >= scheduler->max_tasks) return -1;
+    Task *child = &scheduler->tasks[scheduler->task_count];
+    memset(child, 0, sizeof(Task));
+    child->id = scheduler->task_count;
+    child->state = TASK_RUNNABLE;
+    child->priority = parent->priority;
+
+    // Copy FDT
+    memcpy(child->fd_table, parent->fd_table, sizeof(child->fd_table));
+
+    // Create new page directory
+    createTaskPageStructures(&(child->pageDirectory), &(child->pageDirectoryPhys));
+
+    // Clone VMAs and copy memory content
+    Vma *parent_vma = parent->vma_list;
+    while (parent_vma) {
+        addVma(child, parent_vma->virt_addr, parent_vma->size, parent_vma->prot, parent_vma->flags);
+        
+        // Deep copy each page
+        for (uint32_t addr = parent_vma->virt_addr; addr < parent_vma->virt_addr + parent_vma->size; addr += PAGE_SIZE) {
+            int child_frame = allocPhysicalPage();
+            if (child_frame < 0) return -1;
+            uint32_t child_phys = child_frame * PAGE_SIZE;
+            
+            uint32_t pte_flags = PAGE_PRESENT | PAGE_USER;
+            if (parent_vma->prot & PROT_WRITE) pte_flags |= PAGE_RW;
+            
+            mapPage(child->pageDirectory, addr, child_phys, pte_flags);
+
+            // Copy data using scratchpad
+            cli();
+            uint32_t *active_pt_scratch = (uint32_t*)(VMM_RECURSIVE_PT + ((VMM_SCRATCHPAD >> PAGE_DIR_SHIFT) * PAGE_SIZE));
+            active_pt_scratch[(VMM_SCRATCHPAD >> PAGE_TABLE_SHIFT) & PT_INDEX_MASK] = child_phys | PAGE_PRESENT | PAGE_RW;
+            invalidatePage(VMM_SCRATCHPAD);
+            
+            memcpy((void*)VMM_SCRATCHPAD, (void*)addr, PAGE_SIZE);
+            sti();
+        }
+        parent_vma = parent_vma->next;
+    }
+
+    child->heap_start = parent->heap_start;
+    child->heap_break = parent->heap_break;
+    child->ustack_top = parent->ustack_top;
+
+    // Setup kernel stack for child
+    uint32_t child_kstack_phys_top;
+    if (!allocateStack(child->pageDirectory, KERNEL_STACK_BASE, KSTACK_SIZE, PAGE_RW, &child_kstack_phys_top)) return -1;
+    
+    uint32_t *child_kstack_virt_top = (uint32_t*)physicalToVirtual(child_kstack_phys_top);
+    uint32_t *dest = child_kstack_virt_top;
+    
+    // Setup stack so child returns from interrupt correctly
+    *(--dest) = regs->ss;
+    *(--dest) = regs->useresp;
+    *(--dest) = regs->eflags;
+    *(--dest) = regs->cs;
+    *(--dest) = regs->eip;
+    *(--dest) = (uint32_t)userTrampoline;
+    *(--dest) = 0;            // EAX (child returns 0)
+    *(--dest) = regs->ecx;
+    *(--dest) = regs->edx;
+    *(--dest) = regs->ebx;
+    *(--dest) = regs->esp_dummy; // popa ESP is ignored
+    *(--dest) = regs->ebp;
+    *(--dest) = regs->esi;
+    *(--dest) = regs->edi;
+    
+    uint32_t bytes_pushed = (uint32_t)child_kstack_virt_top - (uint32_t)dest;
+    child->kstack_top = (KERNEL_STACK_TOP_ADDR - bytes_pushed);
+    
+    int child_pid = child->id;
+    scheduler->task_count++;
+
+    if (scheduler->strategy && scheduler->strategy->onTaskAdded) {
+        scheduler->strategy->onTaskAdded(scheduler, child);
+    }
+
+    return child_pid;
 }

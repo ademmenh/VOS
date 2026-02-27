@@ -1,4 +1,5 @@
 #include "string.h"
+#include "memory/heap.h"
 #include <stddef.h>
 
 void* memcpy(void* dest, const void* src, size_t n) {
@@ -107,4 +108,13 @@ char* strstr(const char* haystack, const char* needle) {
         haystack++;
     }
     return NULL;
+}
+
+char* kstrdup(const char* s) {
+    if (!s) return NULL;
+    size_t len = strlen(s);
+    char* d = (char*)kmalloc(len + 1);
+    if (!d) return NULL;
+    memcpy(d, s, len + 1);
+    return d;
 }
