@@ -57,6 +57,8 @@ typedef struct Task {
     Vma *vma_list;
     uint32_t heap_start;
     uint32_t heap_break;
+    int parent_id;
+    int exit_code;
 } Task;
 
 void *allocateStack(uint32_t *pd, uint32_t virt_start, uint32_t size, uint32_t flags, uint32_t *phys_top_out);

@@ -72,6 +72,7 @@ int addTaskKernel(Scheduler *scheduler, void (*func)(void)) {
     memset(t, 0, sizeof(Task));
     t->id = scheduler->task_count;
     t->state = TASK_RUNNABLE;
+    t->parent_id = -1;
     initFDT(t->fd_table);
     
     t->fd_table[STDOUT_FILENO].node = &vga_node;
@@ -136,6 +137,7 @@ int addTask(Scheduler *scheduler, const char *filename) {
     memset(t, 0, sizeof(Task));
     t->id = scheduler->task_count;
     t->state = TASK_RUNNABLE;
+    t->parent_id = -1;
     initFDT(t->fd_table);
     
     t->fd_table[STDOUT_FILENO].node = &vga_node;
@@ -216,6 +218,7 @@ int cloneTask(Scheduler *scheduler, Task *parent, InterruptRegisters *regs) {
     memset(child, 0, sizeof(Task));
     child->id = scheduler->task_count;
     child->state = TASK_RUNNABLE;
+    child->parent_id = parent->id;
     child->priority = parent->priority;
 
     // Copy FDT
@@ -241,13 +244,13 @@ int cloneTask(Scheduler *scheduler, Task *parent, InterruptRegisters *regs) {
             mapPage(child->pageDirectory, addr, child_phys, pte_flags);
 
             // Copy data using scratchpad
-            cli();
+            // cli();
             uint32_t *active_pt_scratch = (uint32_t*)(VMM_RECURSIVE_PT + ((VMM_SCRATCHPAD >> PAGE_DIR_SHIFT) * PAGE_SIZE));
             active_pt_scratch[(VMM_SCRATCHPAD >> PAGE_TABLE_SHIFT) & PT_INDEX_MASK] = child_phys | PAGE_PRESENT | PAGE_RW;
             invalidatePage(VMM_SCRATCHPAD);
             
             memcpy((void*)VMM_SCRATCHPAD, (void*)addr, PAGE_SIZE);
-            sti();
+            // sti();
         }
         parent_vma = parent_vma->next;
     }

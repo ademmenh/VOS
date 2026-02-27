@@ -142,24 +142,42 @@ void test_syscalls_task(void) {
     }
     int80(SYS_WRITE, 1, (int)"Test Pass: sbrk\n", 16);
     
-    // 14. Fork test
-    int80(SYS_WRITE, 1, (int)"Testing fork...\n", 16);
-    int pid = int80(SYS_FORK, 0, 0, 0);
-    if (pid < 0) {
+    // 14. Fork/Wait test
+    int80(SYS_WRITE, 1, (int)"Testing fork and wait...\n", 25);
+    int fork_res = int80(SYS_FORK, 0, 0, 0);
+    
+    int80(SYS_WRITE, 1, (int)"Fork returned: ", 15);
+    int80(SYS_WRITE, 1, (int)"\n", 1);
+
+    if (fork_res < 0) {
         int80(SYS_WRITE, 1, (int)"Test Fail: fork\n", 16);
         while(1);
-    } else if (pid == 0) {
+    } else if (fork_res == 0) {
         // Child
-        int80(SYS_WRITE, 1, (int)"Hello from child!\n", 18);
-        int80(SYS_EXIT, 0, 0, 0);
+        int80(SYS_WRITE, 1, (int)"Child process executing...\n", 27);
+        int80(SYS_WRITE, 1, (int)"Child: Hello! Exiting with 42...\n", 33);
+        int80(SYS_EXIT, 42, 0, 0);
     } else {
         // Parent
-        int80(SYS_WRITE, 1, (int)"Hello from parent, child PID: ", 30);
-        char pid_char = (char)('0' + pid);
-        int80(SYS_WRITE, 1, (int)&pid_char, 1);
+        int wstatus = -7; // Initial unusual value
+        int80(SYS_WRITE, 1, (int)"Parent: Waiting for child PID ", 30);
         int80(SYS_WRITE, 1, (int)"\n", 1);
+        
+        int waited_pid = int80(SYS_WAIT, (int)&wstatus, 0, 0);
+        
+        int80(SYS_WRITE, 1, (int)"Wait returned PID: ", 19);
+        int80(SYS_WRITE, 1, (int)" wstatus: ", 10);
+        int80(SYS_WRITE, 1, (int)"\n", 1);
+
+        if (waited_pid == fork_res && wstatus == 42) {
+            int80(SYS_WRITE, 1, (int)"Test Pass: fork/wait\n", 21);
+        } else {
+            int80(SYS_WRITE, 1, (int)"Test Fail: fork/wait\n", 21);
+            if (waited_pid < 0) {
+                int80(SYS_WRITE, 1, (int)"Error: wait returned negative\n", 30);
+            }
+        }
     }
-    int80(SYS_WRITE, 1, (int)"Test Pass: fork\n", 16);
 
     int80(SYS_WRITE, 1, (int)"Executing /bin/test with args...\n", 33);
     char *argv[] = {"/bin/test", "hello", "world", NULL};
