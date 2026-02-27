@@ -143,3 +143,51 @@ static char* getNextPathToken(char** path_ptr) {
     }
     return token_start;
 }
+
+static char* getNextToken(char** path_ptr) {
+    if (**path_ptr == 0) return NULL;
+    while (**path_ptr == '/') (*path_ptr)++;
+    if (**path_ptr == 0) return NULL;
+    char* token_start = *path_ptr;
+    while (**path_ptr && **path_ptr != '/') (*path_ptr)++;
+    if (**path_ptr) {
+        **path_ptr = 0;
+        (*path_ptr)++;
+    }
+    return token_start;
+}
+
+void resolvePath(const char *path, const char *cwd, char *out_path) {
+    if (!path || !out_path) return;
+    char temp[1024]; 
+    if (path[0] == '/') {
+        strcpy(temp, path);
+    } else {
+        strcpy(temp, cwd);
+        int len = strlen(temp);
+        if (len > 0 && temp[len-1] != '/') strcat(temp, "/");
+        strcat(temp, path);
+    }
+    char stack[1024];
+    strcpy(stack, "/");
+    char *walker = temp;
+    char *token;
+    while ((token = getNextToken(&walker))) {
+        if (strcmp(token, ".") == 0) continue;
+        if (strcmp(token, "..") == 0) {
+            char *last = strrchr(stack, '/');
+            if (last && last != stack) {
+                *last = 0;
+            } else {
+                strcpy(stack, "/");
+            }
+        } else {
+            int len = strlen(stack);
+            if (len > 1 && stack[len-1] != '/') strcat(stack, "/");
+            strcat(stack, token);
+        }
+    }
+    // Final check: if it's empty, set to "/"
+    if (strlen(stack) == 0) strcpy(stack, "/");
+    strcpy(out_path, stack);
+}

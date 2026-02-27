@@ -23,6 +23,7 @@ void *syscalls[MAX_SYSCALLS] = {
     [SYS_FORK] = sys_fork,
     [SYS_EXECVE] = sys_execve,
     [SYS_WAIT] = sys_wait,
+    [SYS_CHDIR] = sys_chdir,
 };
 
 void handleSyscall(InterruptRegisters *regs) {
@@ -45,7 +46,7 @@ void handleSyscall(InterruptRegisters *regs) {
     } else if (regs->eax == SYS_READ || regs->eax == SYS_WRITE || regs->eax == SYS_OPEN || regs->eax == SYS_READLINK) {
         Syscall3 sc = (Syscall3)location;
         ret = sc(regs->ebx, regs->ecx, regs->edx);
-    } else if (regs->eax == SYS_CLOSE || regs->eax == SYS_EXIT || regs->eax == SYS_MUNMAP || regs->eax == SYS_SBRK || regs->eax == SYS_WAIT) {
+    } else if (regs->eax == SYS_CLOSE || regs->eax == SYS_EXIT || regs->eax == SYS_MUNMAP || regs->eax == SYS_SBRK || regs->eax == SYS_WAIT || regs->eax == SYS_CHDIR) {
         Syscall1 sc = (Syscall1)location;
         ret = (int)sc(regs->ebx);
     } else if (regs->eax == SYS_STAT || regs->eax == SYS_FSTAT || regs->eax == SYS_LSTAT || regs->eax == SYS_SYMLINK) {

@@ -1,14 +1,16 @@
 #include "storage/vfs.h"
 #include "storage/stat.h"
 #include "utils/string.h"
+#include "schedulers/scheduler.h"
 
 extern VfsMount* vfs_root;
 
 int sys_stat(const char *path, struct StatBuf *buf) {
     if (!path || !buf) return -1;
-    
-    VfsNode *node = openVfsPath(vfs_root, path);
+    Task *task = getCurrentTask();
+    char full_path[MAX_PATH];
+    resolvePath(path, task->cwd, full_path);
+    VfsNode *node = openVfsPath(vfs_root, full_path);
     if (!node) return -1;
-    
     return statVfsNode(node, buf);
 }

@@ -22,6 +22,7 @@
 #define SYS_FORK      14
 #define SYS_EXECVE    15
 #define SYS_WAIT      16
+#define SYS_CHDIR     17
 
 #define PROT_NONE  0x0
 #define PROT_READ  0x1
@@ -51,5 +52,6 @@ void *sys_sbrk(int increment);
 int sys_fork(InterruptRegisters *regs);
 int sys_execve(const char *path, char *const argv[], char *const envp[], InterruptRegisters *regs);
 int sys_wait(int *wstatus);
+int sys_chdir(const char *path);
 
 #endif

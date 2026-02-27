@@ -57,4 +57,6 @@ int readVfsLink(VfsNode *node, char *buf, uint32_t size);
 
 VfsNode *openVfsPathEx(VfsMount* root_mount, const char *path, int follow_last);
 
+void resolvePath(const char *path, const char *cwd, char *out_path);
+
 #endif

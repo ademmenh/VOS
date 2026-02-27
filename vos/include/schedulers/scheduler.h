@@ -42,4 +42,6 @@ void removeTask(Scheduler *scheduler, int task_id);
 
 int cloneTask(Scheduler *scheduler, Task *parent, InterruptRegisters *regs);
 
+Task *getCurrentTask();
+
 #endif

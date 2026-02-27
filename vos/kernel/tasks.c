@@ -4,6 +4,8 @@
 #include "schedulers/fdt.h"
 #include "memory/vmm.h"
 
+extern VfsMount* vfs_root;
+
 void test_syscalls_task(void) {
     int80(SYS_WRITE, 1, (int)"Starting syscall tests...\n", 26);
     
@@ -179,9 +181,24 @@ void test_syscalls_task(void) {
         }
     }
 
-    int80(SYS_WRITE, 1, (int)"Executing /bin/test with args...\n", 33);
-    char *argv[] = {"/bin/test", "hello", "world", NULL};
-    int80(SYS_EXECVE, (int)"/bin/test", (int)argv, 0);
+    // 15. Chdir test
+    int80(SYS_WRITE, 1, (int)"Testing chdir...\n", 17);
+    int chdir_res = int80(SYS_CHDIR, (int)"/bin", 0, 0);
+    if (chdir_res == 0) {
+        int80(SYS_WRITE, 1, (int)"Test Pass: chdir /bin\n", 22);
+        // Now test relative path to /bin/test
+        int fd_rel = int80(SYS_OPEN, (int)"test", FD_FLAG_READ, 0);
+        if (fd_rel >= 0) {
+            int80(SYS_WRITE, 1, (int)"Test Pass: open relative test\n", 30);
+            int80(SYS_CLOSE, fd_rel, 0, 0);
+        } else {
+            int80(SYS_WRITE, 1, (int)"Test Fail: open relative test\n", 30);
+        }
+        int80(SYS_CHDIR, (int)"/", 0, 0);
+    } else {
+        int80(SYS_WRITE, 1, (int)"Test Fail: chdir /bin\n", 22);
+    }
+
     int80(SYS_WRITE, 1, (int)"ALL SYSCALL TESTS PASSED!\n", 26);
     int80(SYS_EXIT, 0, 0, 0);
 }

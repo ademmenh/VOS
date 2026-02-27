@@ -14,6 +14,7 @@
 extern void contextSwitch(uint32_t **prev_esp_ptr, uint32_t *next_esp, uint32_t next_pd_phys);
 extern void userTrampoline();
 extern VfsNode vga_node;
+extern Scheduler scheduler;
 
 void initScheduler(Scheduler *scheduler, SchedulerStrategy *strategy, Task *tasks, int max_tasks, uint32_t *pageDirectory, TSS *tss) {
     scheduler->strategy = strategy;
@@ -74,6 +75,7 @@ int addTaskKernel(Scheduler *scheduler, void (*func)(void)) {
     t->state = TASK_RUNNABLE;
     t->parent_id = -1;
     initFDT(t->fd_table);
+    strcpy(t->cwd, "/");
     
     t->fd_table[STDOUT_FILENO].node = &vga_node;
     t->fd_table[STDOUT_FILENO].flags = FD_FLAG_WRITE;
@@ -139,6 +141,7 @@ int addTask(Scheduler *scheduler, const char *filename) {
     t->state = TASK_RUNNABLE;
     t->parent_id = -1;
     initFDT(t->fd_table);
+    strcpy(t->cwd, "/");
     
     t->fd_table[STDOUT_FILENO].node = &vga_node;
     t->fd_table[STDOUT_FILENO].flags = FD_FLAG_WRITE;
@@ -221,8 +224,9 @@ int cloneTask(Scheduler *scheduler, Task *parent, InterruptRegisters *regs) {
     child->parent_id = parent->id;
     child->priority = parent->priority;
 
-    // Copy FDT
+    // Copy FDT and CWD
     memcpy(child->fd_table, parent->fd_table, sizeof(child->fd_table));
+    strcpy(child->cwd, parent->cwd);
 
     // Create new page directory
     createTaskPageStructures(&(child->pageDirectory), &(child->pageDirectoryPhys));
@@ -293,4 +297,8 @@ int cloneTask(Scheduler *scheduler, Task *parent, InterruptRegisters *regs) {
     }
 
     return child_pid;
+}
+
+Task *getCurrentTask() {
+    return &scheduler.tasks[scheduler.current_idx];
 }

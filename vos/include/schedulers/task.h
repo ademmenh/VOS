@@ -42,6 +42,8 @@ typedef enum {
     TASK_TERMINATED=4
 } TaskState;
 
+#define MAX_PATH 256
+
 typedef struct Task {
     int id;
     TaskState state;
@@ -57,6 +59,7 @@ typedef struct Task {
     Vma *vma_list;
     uint32_t heap_start;
     uint32_t heap_break;
+    char cwd[MAX_PATH];
     int parent_id;
     int exit_code;
 } Task;
