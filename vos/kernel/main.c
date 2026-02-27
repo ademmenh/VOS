@@ -34,6 +34,7 @@ extern uint32_t pageDirectory[PDE_COUNT];
 extern void test_syscalls_task();
 extern void task1();
 extern void task2();
+extern void startShell();
 
 GDTR gdtr;
 GDTDescriptor gdt[GDT_LENGTH];
@@ -279,57 +280,27 @@ int main () {
 
     // Mock ELF Verification
     VfsNode* bin_dir = createVfsNode(ramfs_root, "bin", VFS_TYPE_DIRECTORY);
-    if (bin_dir) {
-        VfsNode* elf_file = createVfsNode(bin_dir, "test", VFS_TYPE_FILE);
-        if (elf_file) {
-            Elf32Ehdr ehdr;
-            memset(&ehdr, 0, sizeof(ehdr));
-            ehdr.e_ident[EI_MAG0] = ELF_MAG0;
-            ehdr.e_ident[EI_MAG1] = ELF_MAG1;
-            ehdr.e_ident[EI_MAG2] = ELF_MAG2;
-            ehdr.e_ident[EI_MAG3] = ELF_MAG3;
-            ehdr.e_ident[EI_CLASS] = ELFCLASS32;
-            ehdr.e_type = ET_EXEC;
-            ehdr.e_phoff = sizeof(Elf32Ehdr);
-            ehdr.e_phnum = 1;
-            ehdr.e_phentsize = sizeof(Elf32Phdr);
-            ehdr.e_entry = 0x100000;
-
-            Elf32Phdr phdr;
-            memset(&phdr, 0, sizeof(phdr));
-            phdr.p_type = PT_LOAD;
-            phdr.p_offset = sizeof(Elf32Ehdr) + sizeof(Elf32Phdr);
-            phdr.p_vaddr = 0x100000;
-            phdr.p_memsz = PAGE_SIZE;
-            phdr.p_filesz = 64; 
-            phdr.p_flags = PF_R | PF_X;
-
-            uint8_t binary[64];
-            memset(binary, 0, 64);
-            uint8_t code[] = {
-                0xB8, 0x01, 0x00, 0x00, 0x00, // mov eax, 1 (SYS_WRITE)
-                0xBB, 0x01, 0x00, 0x00, 0x00, // mov ebx, 1 (stdout)
-                0xB9, 0x22, 0x00, 0x10, 0x00, // mov ecx, 0x100022 (msg addr)
-                0xBA, 0x0E, 0x00, 0x00, 0x00, // mov edx, 14 (len)
-                0xCD, 0x80,                   // int 0x80
-                0xB8, 0x09, 0x00, 0x00, 0x00, // mov eax, 9 (SYS_EXIT)
-                0xBB, 0x00, 0x00, 0x00, 0x00, // mov ebx, 0
-                0xCD, 0x80                    // int 0x80
-            };
-            memcpy(binary, code, sizeof(code));
-            memcpy(binary + 0x22, "ELF EXEC OK!\n\0", 14);
-
-            writeVfsNode(elf_file, 0, sizeof(Elf32Ehdr), (uint8_t*)&ehdr);
-            writeVfsNode(elf_file, sizeof(Elf32Ehdr), sizeof(Elf32Phdr), (uint8_t*)&phdr);
-            writeVfsNode(elf_file, sizeof(Elf32Ehdr) + sizeof(Elf32Phdr), 64, binary);
-
-            printk("Registered mock ELF /bin/test\n");
-            // addTask(&scheduler, "/bin/test"); // Will be called via sys_exec
-        }
+    if (!bin_dir) {
+        printk("Failed to create /bin directory\n");
+        return -1;
     }
+        
+    // Load vsh (User Shell)
+    extern char vsh_binary_start;
+    extern char vsh_binary_end;
+    uint32_t vsh_size = &vsh_binary_end - &vsh_binary_start;
+    
+    VfsNode* vsh_file = createVfsNode(bin_dir, "vsh", VFS_TYPE_FILE);
+    if (!vsh_file) {
+        printk("Failed to create /bin/vsh\n");
+        return -1;
+    }
+    writeVfsNode(vsh_file, 0, vsh_size, (uint8_t*)&vsh_binary_start);
+    printk("Loaded /bin/vsh (%d bytes)\n", vsh_size);
 
     initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS, pageDirectory, &tss);
     addTaskKernel(&scheduler, test_syscalls_task);
+    addTask(&scheduler, "/bin/vsh");
     // addTaskKernel(&scheduler, task1);
     // addTaskKernel(&scheduler, task2);
     while(1);

@@ -56,4 +56,3 @@ void handleKeyboard(InterruptRegisters *regs) {
         }
     }
 }
-

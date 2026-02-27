@@ -20,18 +20,28 @@ ISO_DIR				:= iso
 SRC_DIR				:= vos
 SRC_DIR_TMP			:= vos/kernel
 SRC_FILES			+= $(wildcard $(SRC_DIR_TMP)/*.c $(SRC_DIR_TMP)/**/*.c)
+# SHELL_SRC is separate now
+SHELL_SRC			:= vos/shell/shell.c vos/shell/lexer.c vos/shell/parser.c vos/shell/string.c
 ISO					:= $(BUILD_DIR)/vos.iso
 DISO				:= $(BUILD_DIR)/vos.iso
 
-.PHONY: all dependencies clean setup bins dbins iso emulate debug demulate asm_bins c_bins c_debug_bins linker
+.PHONY: all dependencies clean setup bins dbins iso emulate debug demulate asm_bins c_bins c_debug_bins linker shell
 
 all: iso
+
+shell:
+	@mkdir -p $(BUILD_DIR)/shell_objects
+	$(ASM) $(ASM_FLAGS) vos/shell/crt0.asm -o $(BUILD_DIR)/shell_objects/crt0.o
+	$(GCC) $(GCC_FLAGS) -c $(SHELL_SRC)
+	@mv *.o $(BUILD_DIR)/shell_objects
+	$(LINKER) $(LINKER_FLAGS) -T vos/shell/linker.ld $(BUILD_DIR)/shell_objects/*.o -o $(BUILD_DIR)/vsh.elf
 
 dependencies:
 	sudo $(PACKAGE_MGR) install $(ASM) $(GCC) $(LINKER) $(QEMU) glibc-devel.i686 libgcc.i686
 
-setup: clean
+setup:
 	@mkdir -p $(BUILD_DIR)/objects
+	@mkdir -p $(BUILD_DIR)/shell_objects
 
 clean:
 	rm -rf $(BUILD_DIR) $(ISO_DIR)
@@ -40,7 +50,7 @@ c_bins:
 	$(GCC) $(GCC_FLAGS) -c $(SRC_FILES)
 	@mv *.o $(BUILD_DIR)/objects
 
-asm_bins:
+asm_bins: shell
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/boot/boot.asm -o $(BUILD_DIR)/objects/boot.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/memory/gdt.asm -o $(BUILD_DIR)/objects/gdt.s.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/schedulers/tss.asm -o $(BUILD_DIR)/objects/tss.s.o
@@ -50,11 +60,12 @@ asm_bins:
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/schedulers/task.asm -o $(BUILD_DIR)/objects/task.s.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/memory/vmm.asm -o $(BUILD_DIR)/objects/vmm.s.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/utils/asm.asm -o $(BUILD_DIR)/objects/asm.s.o
+	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/vsh.asm -o $(BUILD_DIR)/objects/vsh.s.o
 
 link:
 	$(LINKER) $(LINKER_FLAGS) -T $(SRC_DIR)/linker.ld build/objects/*.o -o $(BUILD_DIR)/vos.bin
 
-bins: c_bins asm_bins link
+bins: shell c_bins asm_bins link
 
 $(ISO): setup bins
 	@mkdir -p $(ISO_DIR)/boot/grub
