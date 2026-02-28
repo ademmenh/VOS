@@ -275,6 +275,24 @@ int main () {
         return -1;
     }
     writeVfsNode(vsh_file, 0, vsh_size, (uint8_t*)&vsh_binary_start);
+
+    // Register remaining coreutils
+    const char *utils[] = {"env", "cd", "pwd"};
+    extern char CD_BINARY_START, CD_BINARY_END;
+    extern char ENV_BINARY_START, ENV_BINARY_END;
+    extern char PWD_BINARY_START, PWD_BINARY_END;
+
+    char *starts[] = {&ENV_BINARY_START, &CD_BINARY_START, &PWD_BINARY_START};
+    char *ends[] = {&ENV_BINARY_END, &CD_BINARY_END, &PWD_BINARY_END};
+
+    for (int i = 0; i < 3; i++) {
+        uint32_t size = ends[i] - starts[i];
+        VfsNode* file = createVfsNode(bin_dir, utils[i], VFS_TYPE_FILE);
+        if (file) {
+            writeVfsNode(file, 0, size, (uint8_t*)starts[i]);
+        }
+    }
+
     initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS, pageDirectory, &tss);
     // addTaskKernel(&scheduler, test_syscalls_task);
     addTask(&scheduler, "/bin/vsh");

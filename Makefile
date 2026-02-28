@@ -33,6 +33,9 @@ DISO				:= $(BUILD_DIR)/vos.iso
 
 all: iso
 
+COREUTILS := env cd pwd
+COREUTILS_BINS := $(addprefix $(BUILD_DIR)/, $(addsuffix .elf, $(COREUTILS)))
+
 shell:
 	@mkdir -p $(BUILD_DIR)/shell_objects
 	$(ASM) $(ASM_FLAGS) $(SHELL_SRC_DIR)/crt0.asm -o $(BUILD_DIR)/shell_objects/crt0.o
@@ -42,6 +45,14 @@ shell:
 	$(GCC) $(GCC_FLAGS) -c $(SHELL_SRC_DIR)/string.c -o $(BUILD_DIR)/shell_objects/string.o
 	$(LINKER) $(LINKER_FLAGS) -T $(SHELL_SRC_DIR)/linker.ld $(BUILD_DIR)/shell_objects/*.o -o $(BUILD_DIR)/vsh.elf
 
+$(BUILD_DIR)/%.elf: $(COREUTILS_DIR)/%.c
+	@mkdir -p $(BUILD_DIR)/$*_objects
+	$(ASM) $(ASM_FLAGS) $(SHELL_SRC_DIR)/crt0.asm -o $(BUILD_DIR)/$*_objects/crt0.o
+	$(GCC) $(GCC_FLAGS) -c $< -o $(BUILD_DIR)/$*_objects/$*.o
+	$(GCC) $(GCC_FLAGS) -c $(SHELL_SRC_DIR)/string.c -o $(BUILD_DIR)/$*_objects/string.o
+	$(LINKER) $(LINKER_FLAGS) -T $(SHELL_SRC_DIR)/linker.ld $(BUILD_DIR)/$*_objects/*.o -o $@
+
+coreutils: $(COREUTILS_BINS)
 
 dependencies:
 	sudo $(PACKAGE_MGR) install $(ASM) $(GCC) $(LINKER) $(QEMU) glibc-devel.i686 libgcc.i686
@@ -49,6 +60,7 @@ dependencies:
 setup:
 	@mkdir -p $(BUILD_DIR)/objects
 	@mkdir -p $(BUILD_DIR)/shell_objects
+	@$(foreach util,$(COREUTILS),mkdir -p $(BUILD_DIR)/$(util)_objects;)
 
 clean:
 	rm -rf $(BUILD_DIR) $(ISO_DIR)
@@ -57,7 +69,7 @@ c_bins:
 	$(GCC) $(GCC_FLAGS) -c $(SRC_FILES)
 	@mv *.o $(BUILD_DIR)/objects
 
-asm_bins: shell
+asm_bins: shell coreutils
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/boot/boot.asm -o $(BUILD_DIR)/objects/boot.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/memory/gdt.asm -o $(BUILD_DIR)/objects/gdt.s.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/schedulers/tss.asm -o $(BUILD_DIR)/objects/tss.s.o
@@ -68,11 +80,12 @@ asm_bins: shell
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/memory/vmm.asm -o $(BUILD_DIR)/objects/vmm.s.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/utils/asm.asm -o $(BUILD_DIR)/objects/asm.s.o
 	$(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/vsh.asm -o $(BUILD_DIR)/objects/vsh.s.o
+	$(foreach util,$(COREUTILS), $(ASM) $(ASM_FLAGS) $(SRC_DIR)/kernel/$(util).asm -o $(BUILD_DIR)/objects/$(util).s.o;)
 
 link:
 	$(LINKER) $(LINKER_FLAGS) -T $(SRC_DIR)/linker.ld build/objects/*.o -o $(BUILD_DIR)/vos.bin
 
-bins: shell c_bins asm_bins link
+bins: shell coreutils c_bins asm_bins link
 
 $(ISO): setup bins
 	@mkdir -p $(ISO_DIR)/boot/grub

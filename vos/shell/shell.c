@@ -121,6 +121,20 @@ int handleBuiltinCommands(ShellCommand *cmd) {
         return 1;
     }
 
+    if (strcmp(cmd->args[0], "env") == 0) {
+        for (int i = 0; env_vars[i]; i++) {
+            printToConsole(env_vars[i]);
+            printToConsole("\n");
+        }
+        return 1;
+    }
+
+    if (strcmp(cmd->args[0], "help") == 0) {
+        printToConsole("Available core utilities:\n");
+        printToConsole("  cd, pwd, env, echo, exit, help\n");
+        return 1;
+    }
+
     if (strcmp(cmd->args[0], "echo") == 0) {
         int fd = 1;
         int opened = 0;
