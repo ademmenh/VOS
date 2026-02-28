@@ -25,6 +25,7 @@
 #define SYS_WAIT      16
 #define SYS_CHDIR     17
 #define SYS_GETCWD    18
+#define SYS_DUP2      19
 
 #define PROT_NONE  0x0
 #define PROT_READ  0x1
@@ -56,5 +57,6 @@ int sys_execve(const char *path, char *const argv[], char *const envp[], Interru
 int sys_wait(int *wstatus);
 int sys_chdir(const char *path);
 int sys_getcwd(char *buf, size_t size);
+int sys_dup2(int oldfd, int newfd);
 
 #endif

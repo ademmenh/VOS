@@ -4,6 +4,7 @@
 #include "shell/string.h"
 #include "syscalls/handler.h"
 #include "syscalls/int.h"
+#include "schedulers/fdt.h"
 #include <stddef.h>
 
 #define MAX_LINE 1024
@@ -119,6 +120,32 @@ int handleBuiltinCommands(ShellCommand *cmd) {
         }
         return 1;
     }
+
+    if (strcmp(cmd->args[0], "echo") == 0) {
+        int fd = 1;
+        int opened = 0;
+        if (cmd->output_file) {
+            int flags = FD_FLAG_WRITE | O_CREAT;
+            if (cmd->append_output) flags |= O_APPEND;
+            fd = int80(SYS_OPEN, (int)cmd->output_file, flags, 0);
+            if (fd < 0) {
+                printToConsole("echo: failed to open output file\n");
+                return 1;
+            }
+            opened = 1;
+        }
+        for (int i = 1; i < cmd->arg_count; i++) {
+            int80(SYS_WRITE, fd, (int)cmd->args[i], strlen(cmd->args[i]));
+            if (i < cmd->arg_count - 1) {
+                int80(SYS_WRITE, fd, (int)" ", 1);
+            }
+        }
+        int80(SYS_WRITE, fd, (int)"\n", 1);
+        if (opened) {
+            int80(SYS_CLOSE, fd, 0, 0);
+        }
+        return 1;
+    }
     return 0;
 }
 
@@ -131,6 +158,24 @@ void executeExternalCommand(ShellCommand *cmd) {
         return;
     }
     if (pid == 0) {
+        // Redirection
+        if (cmd->input_file) {
+            int fd = int80(SYS_OPEN, (int)cmd->input_file, FD_FLAG_READ, 0);
+            if (fd >= 0) {
+                int80(SYS_DUP2, fd, STDIN_FILENO, 0);
+                int80(SYS_CLOSE, fd, 0, 0);
+            }
+        }
+        if (cmd->output_file) {
+            int flags = FD_FLAG_WRITE | O_CREAT;
+            if (cmd->append_output) flags |= O_APPEND;
+            int fd = int80(SYS_OPEN, (int)cmd->output_file, flags, 0);
+            if (fd >= 0) {
+                int80(SYS_DUP2, fd, STDOUT_FILENO, 0);
+                int80(SYS_CLOSE, fd, 0, 0);
+            }
+        }
+
         char *argv[MAX_ARGS + 1];
         for (int i = 0; i < cmd->arg_count; i++) argv[i] = cmd->args[i];
         argv[cmd->arg_count] = NULL;

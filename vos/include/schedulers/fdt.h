@@ -12,6 +12,7 @@
 #define FD_FLAG_READ  0x01
 #define FD_FLAG_WRITE 0x02
 #define O_CREAT       0x40
+#define O_APPEND      0x80
 
 typedef struct FileDescriptor {
     struct VfsNode *node;
@@ -26,6 +27,8 @@ int allocFD(FileDescriptor *fdt);
 void freeFD(FileDescriptor *fdt, int fd);
 
 int dupFD(FileDescriptor *fdt, int oldfd);
+
+int dup2FD(FileDescriptor *fdt, int oldfd, int newfd);
 
 void closeAllFDs(FileDescriptor *fdt);
 

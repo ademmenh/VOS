@@ -48,6 +48,20 @@ int dupFD(FileDescriptor *fdt, int oldfd) {
     return newfd;
 }
 
+int dup2FD(FileDescriptor *fdt, int oldfd, int newfd) {
+    if (oldfd < 0 || oldfd >= MAX_FILE_DESCRIPTORS || newfd < 0 || newfd >= MAX_FILE_DESCRIPTORS) {
+        return -1;
+    }
+    if (fdt[oldfd].node == NULL) {
+        return -1;
+    }
+    if (oldfd == newfd) return newfd;
+    fdt[newfd].node = fdt[oldfd].node;
+    fdt[newfd].offset = fdt[oldfd].offset;
+    fdt[newfd].flags = fdt[oldfd].flags;
+    return newfd;
+}
+
 void closeAllFDs(FileDescriptor *fdt) {
     for (int i = 0; i < MAX_FILE_DESCRIPTORS; i++) {
         if (fdt[i].node != NULL) {

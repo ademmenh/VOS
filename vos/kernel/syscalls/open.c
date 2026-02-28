@@ -45,7 +45,7 @@ int sys_open(const char *path, int flags, int mode) {
     if (fd < 0) return -1;
     FileDescriptor *fdesc = &current_task->fd_table[fd];
     fdesc->node = node;
-    fdesc->offset = 0;
+    fdesc->offset = (flags & O_APPEND) ? node->size : 0;
     fdesc->flags = flags; 
     return fd;
 }
