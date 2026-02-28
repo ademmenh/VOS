@@ -67,6 +67,21 @@ void setEnv(const char *name, const char *value) {
     }
 }
 
+void unsetEnv(const char *name) {
+    if (!name) return;
+    int name_len = strlen(name);
+    for (int i = 0; env_vars[i]; i++) {
+        if (strncmp(env_vars[i], name, name_len) == 0 && env_vars[i][name_len] == '=') {
+            int j = i;
+            while (env_vars[j]) {
+                env_vars[j] = env_vars[j+1];
+                j++;
+            }
+            return;
+        }
+    }
+}
+
 void printToConsole(const char *msg) {
     if (!msg) return;
     int80(SYS_WRITE, 1, (int)msg, (int)strlen(msg));
@@ -129,9 +144,29 @@ int handleBuiltinCommands(ShellCommand *cmd) {
         return 1;
     }
 
+    if (strcmp(cmd->args[0], "export") == 0) {
+        if (cmd->arg_count < 2) return 1;
+        char *arg = cmd->args[1];
+        char *eq = strchr(arg, '=');
+        if (eq) {
+            *eq = '\0';
+            setEnv(arg, eq + 1);
+            *eq = '='; // restore for consistency though not strictly needed
+        } else if (cmd->arg_count >= 3) {
+            setEnv(arg, cmd->args[2]);
+        }
+        return 1;
+    }
+
+    if (strcmp(cmd->args[0], "unset") == 0) {
+        if (cmd->arg_count < 2) return 1;
+        unsetEnv(cmd->args[1]);
+        return 1;
+    }
+
     if (strcmp(cmd->args[0], "help") == 0) {
         printToConsole("Available core utilities:\n");
-        printToConsole("  cd, pwd, env, echo, exit, help\n");
+        printToConsole("  cd, pwd, env, echo, export, unset, exit, help\n");
         return 1;
     }
 
