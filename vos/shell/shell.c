@@ -8,6 +8,64 @@
 
 #define MAX_LINE 1024
 
+#define MAX_ENV 32
+char *env_vars[MAX_ENV] = {
+    "PATH=/bin",
+    "PWD=/",
+    "SHELL=/bin/vsh",
+    NULL
+};
+
+static void* allocateMemory(size_t size) {
+    int res = int80(SYS_SBRK, size, 0, 0);
+    if (res == -1) return NULL;
+    return (void*)res;
+}
+
+char *getEnv(const char *name) {
+    if (!name) return NULL;
+    int len = strlen(name);
+    for (int i = 0; env_vars[i]; i++) {
+        if (strncmp(env_vars[i], name, len) == 0 && env_vars[i][len] == '=') {
+            return env_vars[i] + len + 1;
+        }
+    }
+    return NULL;
+}
+
+void setEnv(const char *name, const char *value) {
+    if (!name || !value) return;
+    int name_len = strlen(name);
+    int val_len = strlen(value);
+    
+    // Search for existing
+    for (int i = 0; env_vars[i]; i++) {
+        if (strncmp(env_vars[i], name, name_len) == 0 && env_vars[i][name_len] == '=') {
+            char *new_entry = (char*)allocateMemory(name_len + val_len + 2);
+            if (!new_entry) return;
+            strcpy(new_entry, name);
+            strcat(new_entry, "=");
+            strcat(new_entry, value);
+            env_vars[i] = new_entry;
+            return;
+        }
+    }
+    
+    // Add new
+    for (int i = 0; i < MAX_ENV - 1; i++) {
+        if (env_vars[i] == NULL) {
+            char *new_entry = (char*)allocateMemory(name_len + val_len + 2);
+            if (!new_entry) return;
+            strcpy(new_entry, name);
+            strcat(new_entry, "=");
+            strcat(new_entry, value);
+            env_vars[i] = new_entry;
+            env_vars[i+1] = NULL;
+            return;
+        }
+    }
+}
+
 void printToConsole(const char *msg) {
     if (!msg) return;
     int80(SYS_WRITE, 1, (int)msg, (int)strlen(msg));
@@ -16,18 +74,15 @@ void printToConsole(const char *msg) {
 char *readLineFromKeyboard() {
     static char line[MAX_LINE];
     int idx = 0;
-    
     while (idx < MAX_LINE - 1) {
         char c;
         int n = int80(SYS_READ, 0, (int)&c, 1);
-        
         if (n <= 0) break;
-        
-        if (c == '\n' || c == '\r') {
+        if (c == '\r') continue;
+        if (c == '\n') {
             printToConsole("\n");
             break;
         }
-
         if (c == '\b' || c == 0x7F) {
             if (idx > 0) {
                 idx--;
@@ -35,64 +90,106 @@ char *readLineFromKeyboard() {
             }
             continue;
         }
-
-        // Echo
-        printToConsole((char[2]){c, 0});
         line[idx++] = c;
     }
     line[idx] = '\0';
     return line;
 }
 
+int handleBuiltinCommands(ShellCommand *cmd) {
+    if (!cmd || cmd->arg_count == 0) return 0;
+    if (strcmp(cmd->args[0], "cd") == 0) {
+        char *path = (cmd->arg_count > 1) ? cmd->args[1] : "/";
+        if (int80(SYS_CHDIR, (int)path, 0, 0) < 0) {
+            printToConsole("cd: failed\n");
+        } else {
+            char cwd[256];
+            if (int80(SYS_GETCWD, (int)cwd, sizeof(cwd), 0) == 0) setEnv("PWD", cwd);
+        }
+        return 1;
+    }
+
+    if (strcmp(cmd->args[0], "pwd") == 0) {
+        char cwd[256];
+        if (int80(SYS_GETCWD, (int)cwd, sizeof(cwd), 0) == 0) {
+            printToConsole(cwd);
+            printToConsole("\n");
+        } else {
+            printToConsole("pwd: failed\n");
+        }
+        return 1;
+    }
+    return 0;
+}
+
+void executeExternalCommand(ShellCommand *cmd) {
+    if (!cmd || cmd->arg_count == 0) return;
+    if (handleBuiltinCommands(cmd)) return;
+    int pid = int80(SYS_FORK, 0, 0, 0);
+    if (pid < 0) {
+        printToConsole("Error: fork failed\n");
+        return;
+    }
+    if (pid == 0) {
+        char *argv[MAX_ARGS + 1];
+        for (int i = 0; i < cmd->arg_count; i++) argv[i] = cmd->args[i];
+        argv[cmd->arg_count] = NULL;
+        char *path = cmd->args[0];
+        if (path[0] == '/' || (path[0] == '.' && path[1] == '/')) {
+            int80(SYS_EXECVE, (int)path, (int)argv, (int)env_vars);
+        } else {
+            char *path_env = getEnv("PATH");
+            if (path_env) {
+                char path_copy[256];
+                strncpy(path_copy, path_env, sizeof(path_copy)-1);
+                char *token = path_copy;
+                char *next;
+                while (token) {
+                    next = strchr(token, ':');
+                    if (next) *next = '\0';
+                    char full_path[256];
+                    strcpy(full_path, token);
+                    if (full_path[strlen(full_path)-1] != '/') strcat(full_path, "/");
+                    strcat(full_path, path);
+                    int80(SYS_EXECVE, (int)full_path, (int)argv, (int)env_vars);
+                    if (next) token = next + 1;
+                    else token = NULL;
+                }
+            }
+        }
+        printToConsole(path);
+        printToConsole(": command not found\n");
+        int80(SYS_EXIT, 127, 0, 0);
+    } else {
+        int status = 0;
+        int80(SYS_WAIT, (int)&status, 0, 0);
+    }
+}
+
 void runShellLoop() {
-    printToConsole("VOS Interactive Shell (REPL)\n");
-    
     while (1) {
         printToConsole("vos$ ");
         char *line = readLineFromKeyboard();
-        
         if (!line) break;
         if (strlen(line) == 0) continue;
-
         if (strcmp(line, "exit") == 0) {
             printToConsole("exit\n");
             int80(SYS_EXIT, 0, 0, 0);
             return;
         }
-
         TokenList *tokens = tokenizeInput(line);
         if (tokens && tokens->count > 0) {
             ShellCommand *cmd = parseTokens(tokens);
             if (cmd) {
-                printToConsole("Command: ");
-                printToConsole(cmd->args[0]);
-                printToConsole("\n");
-                
-                for (int i = 1; i < cmd->arg_count; i++) {
-                    printToConsole("  Arg: ");
-                    printToConsole(cmd->args[i]);
-                    printToConsole("\n");
-                }
-                
-                if (cmd->input_file) {
-                    printToConsole("  Input from: ");
-                    printToConsole(cmd->input_file);
-                    printToConsole("\n");
-                }
-                if (cmd->output_file) {
-                    printToConsole("  Output to: ");
-                    printToConsole(cmd->output_file);
-                    if (cmd->append_output) printToConsole(" (append)");
-                    printToConsole("\n");
-                }
-                if (cmd->next) {
-                    printToConsole("  (Pipe to next command...)\n");
-                }
+                executeExternalCommand(cmd);
+                freeCommand(cmd);
             }
+            freeTokenList(tokens);
         }
     }
 }
 
-void startShell() {
+int main(int argc, char *argv[]) {
     runShellLoop();
+    return 0;
 }

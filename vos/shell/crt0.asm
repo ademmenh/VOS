@@ -2,14 +2,11 @@
 
 section .text
 global _start
-extern startShell
+extern main
 
 _start:
-    call startShell
-    
-    ; exit syscall if startShell returns
-    mov eax, 9 ; SYS_EXIT
-    mov ebx, 0 ; status 0
+    call main
+    mov ebx, eax
+    mov eax, 9
     int 0x80
-    
-    jmp $ ; should not reach here
+    hlt

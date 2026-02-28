@@ -31,10 +31,6 @@ extern uint32_t KERNEL_START;
 extern uint32_t KERNEL_END;
 extern uint32_t HEAP_START;
 extern uint32_t pageDirectory[PDE_COUNT];
-extern void test_syscalls_task();
-extern void task1();
-extern void task2();
-extern void startShell();
 
 GDTR gdtr;
 GDTDescriptor gdt[GDT_LENGTH];
@@ -55,24 +51,7 @@ SchedulerStrategy rr_strategy = {
 
 Timer sys_timer;
 Keyboard sys_keyboard;
-IRQHandler irq_routines[16] = {
-    0, 
-    0, 
-    0, 
-    0, 
-    0, 
-    0, 
-    0, 
-    0, 
-    0, 
-    0, 
-    0, 
-    0, 
-    0, 
-    0, 
-    0, 
-    0, 
-};
+IRQHandler irq_routines[16] = {0};
 
 VfsMount* vfs_root = NULL;
 VfsNode vga_node;
@@ -296,12 +275,8 @@ int main () {
         return -1;
     }
     writeVfsNode(vsh_file, 0, vsh_size, (uint8_t*)&vsh_binary_start);
-    printk("Loaded /bin/vsh (%d bytes)\n", vsh_size);
-
     initScheduler(&scheduler, &rr_strategy, tasks, MAX_TASKS, pageDirectory, &tss);
-    addTaskKernel(&scheduler, test_syscalls_task);
+    // addTaskKernel(&scheduler, test_syscalls_task);
     addTask(&scheduler, "/bin/vsh");
-    // addTaskKernel(&scheduler, task1);
-    // addTaskKernel(&scheduler, task2);
     while(1);
 }

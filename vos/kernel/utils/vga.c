@@ -4,7 +4,7 @@
 #include "utils/asm.h"
 #include "memory/vmm.h"
 #include "kernel_stdarg.h"
-#include "kernel_stdarg.h"
+#include "schedulers/scheduler.h"
 #include <stdint.h>
 
 #define LOCAL_BUF_SIZE 512  // stack-local buffer for a single kprintf call
@@ -240,8 +240,6 @@ void printk(const char* fmt, ...) {
 }
 
 int readVga(uint8_t *buffer, uint32_t size) {
-    // VGA text mode reading is not typically useful for standard terminal input
-    // Stub for now. Ideally this would read from keyboard buffer if this was a TTY.
     return 0;
 }
 
@@ -259,15 +257,21 @@ int writeVga(const uint8_t *buffer, uint32_t size, uint8_t color) {
     return (int)size;
 }
 
+extern Scheduler scheduler;
+
 int readFromVgaNode(VfsNode *node, uint32_t offset, uint32_t size, uint8_t *buffer) {
     TTY *tty = (TTY*)node->internal;
     if (!tty) return -1;
 
+    // Block if no data is available
+    while (tty->input_head == tty->input_tail) {
+        sti();
+        yield(&scheduler);
+        cli();
+    }
+
     uint32_t read = 0;
-    while (read < size) {
-        if (tty->input_head == tty->input_tail) {
-            break; // Buffer empty
-        }
+    while (read < size && tty->input_head != tty->input_tail) {
         buffer[read++] = tty->input_buffer[tty->input_tail];
         tty->input_tail = (tty->input_tail + 1) % TTY_BUFFER_SIZE;
     }

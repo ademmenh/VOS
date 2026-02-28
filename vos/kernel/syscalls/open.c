@@ -13,6 +13,7 @@ int sys_open(const char *path, int flags, int mode) {
     Task *current_task = getCurrentTask();
     char full_path[MAX_PATH];
     resolvePath(path, current_task->cwd, full_path);
+    
     VfsNode *node = openVfsPath(vfs_root, full_path);
     if (!node) {
         if (flags & O_CREAT) {

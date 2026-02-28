@@ -19,6 +19,7 @@ static VfsOps ramfs_ops = {
     .writeNode  = writeRamfsNode,
     .lookupNode = lookupRamfsNode,
     .createNode = createRamfsNode,
+    .statNode = NULL,
     .readlinkNode = ramfs_readlink
 };
 

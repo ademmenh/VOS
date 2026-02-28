@@ -77,6 +77,8 @@ int addTaskKernel(Scheduler *scheduler, void (*func)(void)) {
     initFDT(t->fd_table);
     strcpy(t->cwd, "/");
     
+    t->fd_table[STDIN_FILENO].node = &vga_node;
+    t->fd_table[STDIN_FILENO].flags = FD_FLAG_READ;
     t->fd_table[STDOUT_FILENO].node = &vga_node;
     t->fd_table[STDOUT_FILENO].flags = FD_FLAG_WRITE;
     t->fd_table[STDERR_FILENO].node = &vga_node;
@@ -143,6 +145,8 @@ int addTask(Scheduler *scheduler, const char *filename) {
     initFDT(t->fd_table);
     strcpy(t->cwd, "/");
     
+    t->fd_table[STDIN_FILENO].node = &vga_node;
+    t->fd_table[STDIN_FILENO].flags = FD_FLAG_READ;
     t->fd_table[STDOUT_FILENO].node = &vga_node;
     t->fd_table[STDOUT_FILENO].flags = FD_FLAG_WRITE;
     t->fd_table[STDERR_FILENO].node = &vga_node;

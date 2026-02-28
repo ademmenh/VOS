@@ -20,8 +20,12 @@ ISO_DIR				:= iso
 SRC_DIR				:= vos
 SRC_DIR_TMP			:= vos/kernel
 SRC_FILES			+= $(wildcard $(SRC_DIR_TMP)/*.c $(SRC_DIR_TMP)/**/*.c)
-# SHELL_SRC is separate now
-SHELL_SRC			:= vos/shell/shell.c vos/shell/lexer.c vos/shell/parser.c vos/shell/string.c
+# Coreutils and Shell paths
+SHELL_SRC_DIR		:= vos/shell
+COREUTILS_DIR		:= vos/coreutils
+LS_SRC_DIR			:= $(COREUTILS_DIR)/ls
+
+SHELL_SRC			:= $(SHELL_SRC_DIR)/shell.c $(SHELL_SRC_DIR)/lexer.c $(SHELL_SRC_DIR)/parser.c $(SHELL_SRC_DIR)/string.c
 ISO					:= $(BUILD_DIR)/vos.iso
 DISO				:= $(BUILD_DIR)/vos.iso
 
@@ -31,10 +35,13 @@ all: iso
 
 shell:
 	@mkdir -p $(BUILD_DIR)/shell_objects
-	$(ASM) $(ASM_FLAGS) vos/shell/crt0.asm -o $(BUILD_DIR)/shell_objects/crt0.o
-	$(GCC) $(GCC_FLAGS) -c $(SHELL_SRC)
-	@mv *.o $(BUILD_DIR)/shell_objects
-	$(LINKER) $(LINKER_FLAGS) -T vos/shell/linker.ld $(BUILD_DIR)/shell_objects/*.o -o $(BUILD_DIR)/vsh.elf
+	$(ASM) $(ASM_FLAGS) $(SHELL_SRC_DIR)/crt0.asm -o $(BUILD_DIR)/shell_objects/crt0.o
+	$(GCC) $(GCC_FLAGS) -c $(SHELL_SRC_DIR)/shell.c -o $(BUILD_DIR)/shell_objects/shell.o
+	$(GCC) $(GCC_FLAGS) -c $(SHELL_SRC_DIR)/lexer.c -o $(BUILD_DIR)/shell_objects/lexer.o
+	$(GCC) $(GCC_FLAGS) -c $(SHELL_SRC_DIR)/parser.c -o $(BUILD_DIR)/shell_objects/parser.o
+	$(GCC) $(GCC_FLAGS) -c $(SHELL_SRC_DIR)/string.c -o $(BUILD_DIR)/shell_objects/string.o
+	$(LINKER) $(LINKER_FLAGS) -T $(SHELL_SRC_DIR)/linker.ld $(BUILD_DIR)/shell_objects/*.o -o $(BUILD_DIR)/vsh.elf
+
 
 dependencies:
 	sudo $(PACKAGE_MGR) install $(ASM) $(GCC) $(LINKER) $(QEMU) glibc-devel.i686 libgcc.i686

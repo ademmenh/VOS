@@ -3,6 +3,7 @@
 
 #include "routines/idt.h"
 #include "storage/stat.h"
+#include <stddef.h>
 
 #define MAX_SYSCALLS 255
 
@@ -23,6 +24,7 @@
 #define SYS_EXECVE    15
 #define SYS_WAIT      16
 #define SYS_CHDIR     17
+#define SYS_GETCWD    18
 
 #define PROT_NONE  0x0
 #define PROT_READ  0x1
@@ -53,5 +55,6 @@ int sys_fork(InterruptRegisters *regs);
 int sys_execve(const char *path, char *const argv[], char *const envp[], InterruptRegisters *regs);
 int sys_wait(int *wstatus);
 int sys_chdir(const char *path);
+int sys_getcwd(char *buf, size_t size);
 
 #endif
