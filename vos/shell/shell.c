@@ -164,9 +164,14 @@ int handleBuiltinCommands(ShellCommand *cmd) {
         return 1;
     }
 
+    if (strcmp(cmd->args[0], "clear") == 0) {
+        int80(SYS_CLEAR, 0, 0, 0);
+        return 1;
+    }
+
     if (strcmp(cmd->args[0], "help") == 0) {
         printToConsole("Available core utilities:\n");
-        printToConsole("  cd, pwd, env, echo, export, unset, exit, help\n");
+        printToConsole("  cd, pwd, env, echo, export, unset, clear, exit, help\n");
         return 1;
     }
 

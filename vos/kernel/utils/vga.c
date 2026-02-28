@@ -16,7 +16,7 @@ uint16_t* const vga = (uint16_t* const)(0xB8000 + KERNEL_OFFSET);
 const uint16_t defaultColor = (COLOR8_LIGHT_GREY << 8) | (COLOR8_BLACK << 12);
 uint16_t currentColor = defaultColor;
 
-static void vgaClear(){
+void vgaClear(){
     cli();
     line = 0;
     column = 0;

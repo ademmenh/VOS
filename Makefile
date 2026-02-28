@@ -33,7 +33,7 @@ DISO				:= $(BUILD_DIR)/vos.iso
 
 all: iso
 
-COREUTILS := env cd pwd
+COREUTILS := env cd pwd clear
 COREUTILS_BINS := $(addprefix $(BUILD_DIR)/, $(addsuffix .elf, $(COREUTILS)))
 
 shell:

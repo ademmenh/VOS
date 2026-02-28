@@ -22,6 +22,7 @@
 #define width 80
 #define height 25
 
+void vgaClear();
 void printDec(uint32_t num);
 void printHex(uint32_t num);
 void printk(const char* fmt, ...);
