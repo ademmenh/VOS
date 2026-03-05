@@ -277,16 +277,17 @@ int main () {
     writeVfsNode(vsh_file, 0, vsh_size, (uint8_t*)&vsh_binary_start);
 
     // Register remaining coreutils
-    const char *utils[] = {"env", "cd", "pwd", "clear"};
+    const char *utils[] = {"env", "cd", "pwd", "clear", "which"};
     extern char CD_BINARY_START, CD_BINARY_END;
     extern char ENV_BINARY_START, ENV_BINARY_END;
     extern char PWD_BINARY_START, PWD_BINARY_END;
     extern char CLEAR_BINARY_START, CLEAR_BINARY_END;
+    extern char WHICH_BINARY_START, WHICH_BINARY_END;
 
-    char *starts[] = {&ENV_BINARY_START, &CD_BINARY_START, &PWD_BINARY_START, &CLEAR_BINARY_START};
-    char *ends[] = {&ENV_BINARY_END, &CD_BINARY_END, &PWD_BINARY_END, &CLEAR_BINARY_END};
+    char *starts[] = {&ENV_BINARY_START, &CD_BINARY_START, &PWD_BINARY_START, &CLEAR_BINARY_START, &WHICH_BINARY_START};
+    char *ends[] = {&ENV_BINARY_END, &CD_BINARY_END, &PWD_BINARY_END, &CLEAR_BINARY_END, &WHICH_BINARY_END};
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 5; i++) {
         uint32_t size = ends[i] - starts[i];
         VfsNode* file = createVfsNode(bin_dir, utils[i], VFS_TYPE_FILE);
         if (file) {

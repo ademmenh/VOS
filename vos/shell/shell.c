@@ -169,9 +169,50 @@ int handleBuiltinCommands(ShellCommand *cmd) {
         return 1;
     }
 
+    if (strcmp(cmd->args[0], "which") == 0) {
+        if (cmd->arg_count < 2) return 1;
+        char *target = cmd->args[1];
+        
+        const char *builtins[] = {"cd", "pwd", "env", "echo", "export", "unset", "clear", "exit", "help", "which", NULL};
+        for (int i = 0; builtins[i]; i++) {
+            if (strcmp(target, builtins[i]) == 0) {
+                printToConsole(target);
+                printToConsole(": shell built-in command\n");
+                return 1;
+            }
+        }
+
+        // Search PATH
+        char *path_env = getEnv("PATH");
+        if (path_env) {
+            char path_copy[256];
+            strncpy(path_copy, path_env, sizeof(path_copy)-1);
+            char *token = path_copy;
+            char *next;
+            while (token) {
+                next = strchr(token, ':');
+                if (next) *next = '\0';
+                char full_path[256];
+                strcpy(full_path, token);
+                if (full_path[strlen(full_path)-1] != '/') strcat(full_path, "/");
+                strcat(full_path, target);
+                int fd = int80(SYS_OPEN, (int)full_path, 0, 0);
+                if (fd >= 0) {
+                    int80(SYS_CLOSE, fd, 0, 0);
+                    printToConsole(full_path);
+                    printToConsole("\n");
+                    return 1;
+                }
+                if (next) token = next + 1;
+                else token = NULL;
+            }
+        }
+        return 1;
+    }
+
     if (strcmp(cmd->args[0], "help") == 0) {
         printToConsole("Available core utilities:\n");
-        printToConsole("  cd, pwd, env, echo, export, unset, clear, exit, help\n");
+        printToConsole("  cd, pwd, env, echo, export, unset, clear, which, exit, help\n");
         return 1;
     }
 
