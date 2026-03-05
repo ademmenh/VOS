@@ -8,14 +8,61 @@ void initVfs(VfsMount** root_mount) {
     *root_mount = NULL;
 }
 
-int mountVfsRoot(VfsMount** root_mount, VfsNode* root_node) {
+int mountVfsRoot(VfsMount** root_mount, VfsNode* root_node, const char *type) {
     if (!root_node) return -1;
     VfsMount* mount = (VfsMount*)kzalloc(sizeof(VfsMount));
     if (!mount) return -1;
     mount->root = root_node;
+    mount->mount_point = NULL;
+    strcpy(mount->target, "/");
+    strcpy(mount->type, type ? type : "unknown");
     mount->next = NULL;
     *root_mount = mount;
     return 0;
+}
+
+int mountVfs(VfsMount* root_mount, const char *path, VfsNode *new_root, const char *type) {
+    if (!root_mount || !path || !new_root) return -1;
+    VfsNode *mp = openVfsPath(root_mount, path);
+    if (!mp || mp->type != VFS_TYPE_DIRECTORY) return -1;
+
+    VfsMount *mount = (VfsMount*)kzalloc(sizeof(VfsMount));
+    if (!mount) return -1;
+    mount->root = new_root;
+    mount->mount_point = mp;
+    strncpy(mount->target, path, sizeof(mount->target)-1);
+    strcpy(mount->type, type ? type : "unknown");
+    
+    // Add to list
+    VfsMount *curr = root_mount;
+    while (curr->next) curr = curr->next;
+    curr->next = mount;
+    return 0;
+}
+
+int listVfsMounts(VfsMount* root_mount, char *buf, uint32_t size) {
+    if (!root_mount || !buf) return -1;
+    VfsMount *m = root_mount;
+    buf[0] = '\0';
+    uint32_t current_len = 0;
+
+    while (m) {
+        char line[256];
+        strcpy(line, m->type);
+        strcat(line, " on ");
+        strcat(line, m->target);
+        strcat(line, "\n");
+        
+        uint32_t line_len = strlen(line);
+        if (current_len + line_len < size) {
+            strcat(buf, line);
+            current_len += line_len;
+        } else {
+            break;
+        }
+        m = m->next;
+    }
+    return current_len;
 }
 
 VfsNode* openVfsPath(VfsMount* root_mount, const char* path) {
@@ -34,6 +81,16 @@ VfsNode* openVfsPathEx(VfsMount* root_mount, const char* path, int follow_last) 
     
     int symlink_count = 0;
     while ((token = getNextPathToken(&walker))) {
+        // Cross mount points if any
+        VfsMount *m = root_mount;
+        while (m) {
+            if (m->mount_point == current_node) {
+                current_node = m->root;
+                break;
+            }
+            m = m->next;
+        }
+
         if (!current_node->ops || !current_node->ops->lookupNode) {
             kfree(path_copy);
             return NULL;
@@ -90,6 +147,16 @@ VfsNode* openVfsPathEx(VfsMount* root_mount, const char* path, int follow_last) 
             }
         }
     }
+    // Check one last time if current_node is a mount point (case: path ends at mount point)
+    VfsMount *m = root_mount;
+    while (m) {
+        if (m->mount_point == current_node) {
+            current_node = m->root;
+            break;
+        }
+        m = m->next;
+    }
+
     kfree(path_copy);
     if (current_node->ops && current_node->ops->openNode) current_node->ops->openNode(current_node);
     return current_node;

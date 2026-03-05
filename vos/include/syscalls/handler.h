@@ -27,6 +27,7 @@
 #define SYS_GETCWD    18
 #define SYS_DUP2      19
 #define SYS_CLEAR     20
+#define SYS_MOUNT     21
 
 #define PROT_NONE  0x0
 #define PROT_READ  0x1
@@ -60,5 +61,6 @@ int sys_chdir(const char *path);
 int sys_getcwd(char *buf, size_t size);
 int sys_dup2(int oldfd, int newfd);
 int sys_clear();
+int sys_mount(const char *source, const char *target, const char *type);
 
 #endif

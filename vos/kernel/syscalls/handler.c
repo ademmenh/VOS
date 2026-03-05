@@ -27,6 +27,7 @@ void *syscalls[MAX_SYSCALLS] = {
     [SYS_GETCWD] = sys_getcwd,
     [SYS_DUP2] = sys_dup2,
     [SYS_CLEAR] = sys_clear,
+    [SYS_MOUNT] = sys_mount,
 };
 
 void handleSyscall(InterruptRegisters *regs) {
@@ -46,7 +47,7 @@ void handleSyscall(InterruptRegisters *regs) {
     if (regs->eax == SYS_MMAP) {
         Syscall6 sc = (Syscall6)location;
         ret = (int)sc(regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi, regs->ebp);
-    } else if (regs->eax == SYS_READ || regs->eax == SYS_WRITE || regs->eax == SYS_OPEN || regs->eax == SYS_READLINK) {
+    } else if (regs->eax == SYS_READ || regs->eax == SYS_WRITE || regs->eax == SYS_OPEN || regs->eax == SYS_READLINK || regs->eax == SYS_MOUNT) {
         Syscall3 sc = (Syscall3)location;
         ret = sc(regs->ebx, regs->ecx, regs->edx);
     } else if (regs->eax == SYS_CLOSE || regs->eax == SYS_EXIT || regs->eax == SYS_MUNMAP || regs->eax == SYS_SBRK || regs->eax == SYS_WAIT || regs->eax == SYS_CHDIR || regs->eax == SYS_CLEAR) {

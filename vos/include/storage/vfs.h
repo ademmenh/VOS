@@ -36,12 +36,19 @@ struct VfsNode {
 
 struct VfsMount {
     VfsNode *root;
+    VfsNode *mount_point;
+    char target[128];
+    char type[32];
     VfsMount *next;
 };
 
 void initVfs(VfsMount** root_mount);
 
-int mountVfsRoot(VfsMount** root_mount, VfsNode *root_node);
+int mountVfsRoot(VfsMount** root_mount, VfsNode *root_node, const char *type);
+
+int mountVfs(VfsMount* root_mount, const char *path, VfsNode *new_root, const char *type);
+
+int listVfsMounts(VfsMount* root_mount, char *buf, uint32_t size);
 
 VfsNode *openVfsPath(VfsMount* root_mount, const char *path);
 

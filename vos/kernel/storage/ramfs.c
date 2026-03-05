@@ -31,6 +31,11 @@ VfsNode* getRamfsRootNode() {
     return &ramfs_root->vfs;
 }
 
+VfsNode* createNewRamfs() {
+    RamfsNode* root = allocateRamfsNode("/", VFS_TYPE_DIRECTORY);
+    return &root->vfs;
+}
+
 static VfsNode* createRamfsNode(VfsNode* parent_node, const char* name, uint32_t type) {
     RamfsNode* parent = convertToRamfsNode(parent_node);
     if (!parent || parent->vfs.type != VFS_TYPE_DIRECTORY) return NULL;

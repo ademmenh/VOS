@@ -38,8 +38,6 @@ void setEnv(const char *name, const char *value) {
     if (!name || !value) return;
     int name_len = strlen(name);
     int val_len = strlen(value);
-    
-    // Search for existing
     for (int i = 0; env_vars[i]; i++) {
         if (strncmp(env_vars[i], name, name_len) == 0 && env_vars[i][name_len] == '=') {
             char *new_entry = (char*)allocateMemory(name_len + val_len + 2);
@@ -51,8 +49,6 @@ void setEnv(const char *name, const char *value) {
             return;
         }
     }
-    
-    // Add new
     for (int i = 0; i < MAX_ENV - 1; i++) {
         if (env_vars[i] == NULL) {
             char *new_entry = (char*)allocateMemory(name_len + val_len + 2);
@@ -151,7 +147,7 @@ int handleBuiltinCommands(ShellCommand *cmd) {
         if (eq) {
             *eq = '\0';
             setEnv(arg, eq + 1);
-            *eq = '='; // restore for consistency though not strictly needed
+            *eq = '=';
         } else if (cmd->arg_count >= 3) {
             setEnv(arg, cmd->args[2]);
         }
@@ -172,8 +168,6 @@ int handleBuiltinCommands(ShellCommand *cmd) {
     if (strcmp(cmd->args[0], "which") == 0) {
         if (cmd->arg_count < 2) return 1;
         char *target = cmd->args[1];
-        
-        // Search PATH
         char *path_env = getEnv("PATH");
         if (path_env) {
             char path_copy[256];
@@ -201,9 +195,23 @@ int handleBuiltinCommands(ShellCommand *cmd) {
         return 1;
     }
 
+    if (strcmp(cmd->args[0], "mount") == 0) {
+        if (cmd->arg_count < 2) {
+            char buf[1024];
+            int n = int80(SYS_LIST_MOUNTS, (int)buf, sizeof(buf), 0);
+            if (n > 0) {
+                buf[n] = '\0';
+                printToConsole(buf);
+            }
+        } else {
+            return 0;
+        }
+        return 1;
+    }
+
     if (strcmp(cmd->args[0], "help") == 0) {
         printToConsole("Available core utilities:\n");
-        printToConsole("  cd, pwd, env, echo, export, unset, clear, which, exit, help\n");
+        printToConsole("  cd, pwd, env, echo, export, unset, clear, which, mount, exit, help\n");
         return 1;
     }
 

@@ -30,7 +30,7 @@ int main(int argc, char *argv[], char *envp[]) {
         
         // Handle absolute/relative paths
         if (cmd[0] == '/' || (cmd[0] == '.' && cmd[1] == '/')) {
-            int fd = int80(SYS_OPEN, (int)cmd, 0, 0); // O_RDONLY
+            int fd = int80(SYS_OPEN, (int)cmd, 0, 0);
             if (fd >= 0) {
                 int80(SYS_CLOSE, fd, 0, 0);
                 printToConsole(cmd);

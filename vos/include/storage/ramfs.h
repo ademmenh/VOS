@@ -15,5 +15,6 @@ typedef struct RamfsNode {
 void initRamfs();
 
 VfsNode* getRamfsRootNode();
+VfsNode* createNewRamfs();
 
 #endif
