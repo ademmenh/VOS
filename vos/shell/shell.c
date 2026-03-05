@@ -173,15 +173,6 @@ int handleBuiltinCommands(ShellCommand *cmd) {
         if (cmd->arg_count < 2) return 1;
         char *target = cmd->args[1];
         
-        const char *builtins[] = {"cd", "pwd", "env", "echo", "export", "unset", "clear", "exit", "help", "which", NULL};
-        for (int i = 0; builtins[i]; i++) {
-            if (strcmp(target, builtins[i]) == 0) {
-                printToConsole(target);
-                printToConsole(": shell built-in command\n");
-                return 1;
-            }
-        }
-
         // Search PATH
         char *path_env = getEnv("PATH");
         if (path_env) {

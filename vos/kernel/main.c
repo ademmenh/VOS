@@ -277,17 +277,24 @@ int main () {
     writeVfsNode(vsh_file, 0, vsh_size, (uint8_t*)&vsh_binary_start);
 
     // Register remaining coreutils
-    const char *utils[] = {"env", "cd", "pwd", "clear", "which"};
+    const char *utils[] = {"env", "cd", "pwd", "clear", "which", "echo", "help", "export", "unset", "exit"};
     extern char CD_BINARY_START, CD_BINARY_END;
     extern char ENV_BINARY_START, ENV_BINARY_END;
     extern char PWD_BINARY_START, PWD_BINARY_END;
     extern char CLEAR_BINARY_START, CLEAR_BINARY_END;
     extern char WHICH_BINARY_START, WHICH_BINARY_END;
+    extern char ECHO_BINARY_START, ECHO_BINARY_END;
+    extern char HELP_BINARY_START, HELP_BINARY_END;
+    extern char EXPORT_BINARY_START, EXPORT_BINARY_END;
+    extern char UNSET_BINARY_START, UNSET_BINARY_END;
+    extern char EXIT_BINARY_START, EXIT_BINARY_END;
 
-    char *starts[] = {&ENV_BINARY_START, &CD_BINARY_START, &PWD_BINARY_START, &CLEAR_BINARY_START, &WHICH_BINARY_START};
-    char *ends[] = {&ENV_BINARY_END, &CD_BINARY_END, &PWD_BINARY_END, &CLEAR_BINARY_END, &WHICH_BINARY_END};
+    char *starts[] = {&ENV_BINARY_START, &CD_BINARY_START, &PWD_BINARY_START, &CLEAR_BINARY_START, &WHICH_BINARY_START, 
+                      &ECHO_BINARY_START, &HELP_BINARY_START, &EXPORT_BINARY_START, &UNSET_BINARY_START, &EXIT_BINARY_START};
+    char *ends[] = {&ENV_BINARY_END, &CD_BINARY_END, &PWD_BINARY_END, &CLEAR_BINARY_END, &WHICH_BINARY_END,
+                    &ECHO_BINARY_END, &HELP_BINARY_END, &EXPORT_BINARY_END, &UNSET_BINARY_END, &EXIT_BINARY_END};
 
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 10; i++) {
         uint32_t size = ends[i] - starts[i];
         VfsNode* file = createVfsNode(bin_dir, utils[i], VFS_TYPE_FILE);
         if (file) {
