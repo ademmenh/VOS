@@ -205,7 +205,7 @@ int main () {
     initVfs(&vfs_root);
     initRamfs();
     VfsNode* ramfs_root = getRamfsRootNode();
-    mountVfsRoot(&vfs_root, ramfs_root);
+    mountVfsRoot(&vfs_root, ramfs_root, "ramfs");
 
     // Initialize TTY
     initTty(&system_tty);
