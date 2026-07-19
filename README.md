@@ -1,6 +1,6 @@
 # VOS Build & Development Guide
 
-![Boot Process](docs/vos.png)
+![Demo](docs/demo.gif)
 
 ## Project Structure Overview
 
@@ -22,6 +22,7 @@ project/
 ## Build Commands
 
 The Makefile supports the following commands:
+
 - `make dependencies`: Install required tools automatically (`gcc`, `ld`, `nasm`, etc.).
 - `make emulate`: Run OS in QEMU.
 - `make demulate`: Run QEMU in debug mode waiting for GDB.
