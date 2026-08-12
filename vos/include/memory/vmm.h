@@ -8,6 +8,16 @@
 #define PAGE_PRESENT   (1 << 0)
 #define PAGE_RW        (1 << 1)
 #define PAGE_USER      (1 << 2)
+#define PAGE_WRITETHRU (1 << 3)
+#define PAGE_CACHE_DIS (1 << 4)
+#define PAGE_ACCESSED  (1 << 5)
+#define PAGE_DIRTY     (1 << 6)
+#define PAGE_4MB       (1 << 7)
+#define PAGE_GLOBAL    (1 << 8)
+
+#define PAGING_ENABLE  (1 << 31)
+
+#define KERNEL_PAGE_TABLES_COUNT 32
 
 #define PAGE_SIZE      4096
 #define PAGE_MASK      0xFFFFF000
@@ -36,6 +46,8 @@ extern uint32_t pageDirectory[PDE_COUNT];
 void mapPage(uint32_t *pd, uint32_t virt, uint32_t phys, uint32_t flags);
 void unmapPage(uint32_t *pd, uint32_t virt);
 
+extern void initVmm(void);
+extern void removeIdentityMapping(void);
 extern void enablePaging(uint32_t *pageDirectory_phys);
 extern void invalidatePage(uint32_t virt);
 extern uint32_t getCR2(void);
