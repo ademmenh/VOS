@@ -5,56 +5,129 @@
 #include "memory/heap.h"
 #include "utils/asm.h"
 
-void mapPage(uint32_t *pd, uint32_t virt, uint32_t phys, uint32_t flags) {
-    if (virt >= KERNEL_OFFSET) flags &= ~PAGE_USER;
-    uint32_t pd_index = virt >> PAGE_DIR_SHIFT;
-    uint32_t pt_index = (virt >> PAGE_TABLE_SHIFT) & PT_INDEX_MASK;
-    uint32_t *current_pd = (uint32_t*)VMM_RECURSIVE_PD;
-    if (pd == current_pd) {
-        uint32_t *recursive_pd = current_pd;
-        uint32_t *recursive_pt = (uint32_t*)(VMM_RECURSIVE_PT + pd_index * PAGE_SIZE);
-        if (!(recursive_pd[pd_index] & PAGE_PRESENT)) {
-            int frame = allocPhysicalPage();
-            if (frame < 0) return;
-            uint32_t pt_phys = frame * PAGE_SIZE;
-            recursive_pd[pd_index] = pt_phys | PAGE_PRESENT | PAGE_RW;
-            if (flags & PAGE_USER) recursive_pd[pd_index] |= PAGE_USER;
-            invalidatePage((uint32_t)recursive_pt);
-            memset(recursive_pt, 0, PAGE_SIZE);
-        } else {
-            if (flags & PAGE_USER) recursive_pd[pd_index] |= PAGE_USER;
-        }
-        recursive_pt[pt_index] = (phys & PAGE_MASK) | flags | PAGE_PRESENT;
-        invalidatePage(virt);
-    } else {
-        cli();
-        uint32_t scratch_pde_index = VMM_SCRATCHPAD >> PAGE_DIR_SHIFT;
-        uint32_t scratch_pte_index = (VMM_SCRATCHPAD >> PAGE_TABLE_SHIFT) & PT_INDEX_MASK;
-        uint32_t *active_pt_scratch = (uint32_t*)(VMM_RECURSIVE_PT + scratch_pde_index * PAGE_SIZE);
-        
-        if (!(pd[pd_index] & PAGE_PRESENT)) {
-            int frame = allocPhysicalPage();
-            if (frame < 0) { sti(); return; }
-            uint32_t pt_phys = frame * PAGE_SIZE;
-            pd[pd_index] = pt_phys | PAGE_PRESENT | PAGE_RW;
-            if (flags & PAGE_USER) pd[pd_index] |= PAGE_USER;
-            active_pt_scratch[scratch_pte_index] = pt_phys | PAGE_PRESENT | PAGE_RW;
-            invalidatePage(VMM_SCRATCHPAD);
-            memset((void*)VMM_SCRATCHPAD, 0, PAGE_SIZE);
-        } else {
-            if (flags & PAGE_USER) pd[pd_index] |= PAGE_USER;
-            uint32_t pt_phys = pd[pd_index] & PAGE_MASK;
-            active_pt_scratch[scratch_pte_index] = pt_phys | PAGE_PRESENT | PAGE_RW;
-            invalidatePage(VMM_SCRATCHPAD);
-        }
+// Helper Functions
 
-        uint32_t *pt_virt = (uint32_t*)VMM_SCRATCHPAD;
-        pt_virt[pt_index] = (phys & PAGE_MASK) | flags | PAGE_PRESENT;
-        invalidatePage(VMM_SCRATCHPAD);
-        sti();
+static uint32_t enforce_kernel_security_flags(uint32_t virt, uint32_t flags) {
+    if (virt >= KERNEL_OFFSET) {
+        // Prevent user-mode access to kernel space
+        return flags & (~PAGE_USER); 
+    }
+    return flags;
+}
+
+static void* map_scratchpad(uint32_t phys_addr) {
+    uint32_t scratch_pde_index = VMM_SCRATCHPAD >> PAGE_DIR_SHIFT;
+    uint32_t scratch_pte_index = (VMM_SCRATCHPAD >> PAGE_TABLE_SHIFT) & PT_INDEX_MASK;
+    uint32_t *active_pt_scratch = (uint32_t*)(VMM_RECURSIVE_PT + scratch_pde_index * PAGE_SIZE);
+    
+    active_pt_scratch[scratch_pte_index] = phys_addr | PAGE_PRESENT | PAGE_RW;
+    invalidatePage(VMM_SCRATCHPAD);
+    return (void*)VMM_SCRATCHPAD;
+}
+
+static void map_page_active_directory(uint32_t pd_index, uint32_t pt_index, uint32_t phys, uint32_t flags) {
+    uint32_t *recursive_pd = (uint32_t*)VMM_RECURSIVE_PD;
+    uint32_t *recursive_pt = (uint32_t*)(VMM_RECURSIVE_PT + pd_index * PAGE_SIZE);
+
+    if (!(recursive_pd[pd_index] & PAGE_PRESENT)) {
+        int frame = allocPhysicalPage();
+        if (frame < 0) return;
+        
+        uint32_t pt_phys = frame * PAGE_SIZE;
+        recursive_pd[pd_index] = pt_phys | PAGE_PRESENT | PAGE_RW;
+        if (flags & PAGE_USER) {
+            recursive_pd[pd_index] |= PAGE_USER;
+        }
+        
+        invalidatePage((uint32_t)recursive_pt);
+        memset(recursive_pt, 0, PAGE_SIZE);
+    } else if (flags & PAGE_USER) {
+        recursive_pd[pd_index] |= PAGE_USER;
+    }
+
+    recursive_pt[pt_index] = (phys & PAGE_MASK) | flags | PAGE_PRESENT;
+}
+
+static void map_page_inactive_directory(uint32_t *pd, uint32_t pd_index, uint32_t pt_index, uint32_t phys, uint32_t flags) {
+    cli();
+    
+    if (!(pd[pd_index] & PAGE_PRESENT)) {
+        int frame = allocPhysicalPage();
+        if (frame < 0) { 
+            sti(); 
+            return; 
+        }
+        
+        uint32_t pt_phys = frame * PAGE_SIZE;
+        pd[pd_index] = pt_phys | PAGE_PRESENT | PAGE_RW;
+        if (flags & PAGE_USER) {
+            pd[pd_index] |= PAGE_USER;
+        }
+        
+        uint32_t *pt_virt = (uint32_t*)map_scratchpad(pt_phys);
+        memset(pt_virt, 0, PAGE_SIZE);
+    } else {
+        if (flags & PAGE_USER) {
+            pd[pd_index] |= PAGE_USER;
+        }
+        uint32_t pt_phys = pd[pd_index] & PAGE_MASK;
+        map_scratchpad(pt_phys);
+    }
+
+    uint32_t *pt_virt = (uint32_t*)VMM_SCRATCHPAD;
+    pt_virt[pt_index] = (phys & PAGE_MASK) | flags | PAGE_PRESENT;
+    invalidatePage(VMM_SCRATCHPAD);
+    
+    sti();
+}
+
+static void unmap_page_active_directory(uint32_t virt, uint32_t pd_index, uint32_t pt_index) {
+    uint32_t *recursive_pd = (uint32_t*)VMM_RECURSIVE_PD;
+    uint32_t *recursive_pt = (uint32_t*)(VMM_RECURSIVE_PT + (pd_index * PAGE_SIZE));
+
+    if (recursive_pd[pd_index] & PAGE_PRESENT) {
+        uint32_t pte = recursive_pt[pt_index];
+        if (pte & PAGE_PRESENT) {
+            freePhysicalPage(PAGE_ALIGN_4K(pte) / PAGE_SIZE);
+            recursive_pt[pt_index] = 0;
+            invalidatePage(virt);
+        }
     }
 }
 
+static void unmap_page_inactive_directory(uint32_t *pd, uint32_t pd_index, uint32_t pt_index) {
+    cli();
+    if (pd[pd_index] & PAGE_PRESENT) {
+        uint32_t pt_phys = PAGE_ALIGN_4K(pd[pd_index]);
+        
+        uint32_t *pt_virt = (uint32_t*)map_scratchpad(pt_phys);
+        uint32_t pte = pt_virt[pt_index];
+        
+        if (pte & PAGE_PRESENT) {
+            freePhysicalPage(PAGE_ALIGN_4K(pte) / PAGE_SIZE);
+            pt_virt[pt_index] = 0;
+        }
+    }
+    sti();
+}
+
+
+// Main Functions
+
+void mapPage(uint32_t *pd, uint32_t virt, uint32_t phys, uint32_t flags) {
+    flags = enforce_kernel_security_flags(virt, flags);
+    
+    uint32_t pd_index = virt >> PAGE_DIR_SHIFT;
+    uint32_t pt_index = (virt >> PAGE_TABLE_SHIFT) & PT_INDEX_MASK;
+    uint32_t *current_pd = (uint32_t*)VMM_RECURSIVE_PD;
+    
+    if (pd == current_pd) {
+        map_page_active_directory(pd_index, pt_index, phys, flags);
+        invalidatePage(virt);
+    } else {
+        map_page_inactive_directory(pd, pd_index, pt_index, phys, flags);
+    }
+}
 
 void unmapPage(uint32_t *pd, uint32_t virt) {
     uint32_t pd_index = virt >> PAGE_DIR_SHIFT;
@@ -64,34 +137,9 @@ void unmapPage(uint32_t *pd, uint32_t virt) {
     uint32_t target_pd_phys = virtualToPhysical((uint32_t)pd);
 
     if (current_pd_phys == target_pd_phys) {
-        uint32_t *recursive_pd = (uint32_t*)VMM_RECURSIVE_PD;
-        uint32_t *recursive_pt = (uint32_t*)(VMM_RECURSIVE_PT + (pd_index * PAGE_SIZE));
-
-        if (recursive_pd[pd_index] & PAGE_PRESENT) {
-            uint32_t pte = recursive_pt[pt_index];
-            if (pte & PAGE_PRESENT) {
-                freePhysicalPage(PAGE_ALIGN_4K(pte) / PAGE_SIZE);
-                recursive_pt[pt_index] = 0;
-                invalidatePage(virt);
-            }
-        }
+        unmap_page_active_directory(virt, pd_index, pt_index);
     } else {
-        // Unmapping from non-active PD using scratchpad
-        cli();
-        if (pd[pd_index] & PAGE_PRESENT) {
-            uint32_t pt_phys = PAGE_ALIGN_4K(pd[pd_index]);
-            uint32_t *active_pt_scratch = (uint32_t*)(VMM_RECURSIVE_PT + ((VMM_SCRATCHPAD >> PAGE_DIR_SHIFT) * PAGE_SIZE));
-            active_pt_scratch[(VMM_SCRATCHPAD >> PAGE_TABLE_SHIFT) & PT_INDEX_MASK] = pt_phys | PAGE_PRESENT | PAGE_RW;
-            invalidatePage(VMM_SCRATCHPAD);
-
-            uint32_t *pt_virt = (uint32_t*)VMM_SCRATCHPAD;
-            uint32_t pte = pt_virt[pt_index];
-            if (pte & PAGE_PRESENT) {
-                freePhysicalPage(PAGE_ALIGN_4K(pte) / PAGE_SIZE);
-                pt_virt[pt_index] = 0;
-            }
-        }
-        sti();
+        unmap_page_inactive_directory(pd, pd_index, pt_index);
     }
 }
 
@@ -104,11 +152,7 @@ void createTaskPageStructures(uint32_t **pd_out, uint32_t *pd_phys_out) {
     
     // Map new PD to scratchpad to initialize it
     cli();
-    uint32_t *active_pt_scratch = (uint32_t*)(VMM_RECURSIVE_PT + ((VMM_SCRATCHPAD >> PAGE_DIR_SHIFT) * PAGE_SIZE));
-    active_pt_scratch[(VMM_SCRATCHPAD >> PAGE_TABLE_SHIFT) & PT_INDEX_MASK] = pd_phys | PAGE_PRESENT | PAGE_RW;
-    invalidatePage(VMM_SCRATCHPAD);
-    
-    uint32_t *new_pd = (uint32_t*)VMM_SCRATCHPAD;
+    uint32_t *new_pd = (uint32_t*)map_scratchpad(pd_phys);
     uint32_t *current_pd = (uint32_t*)VMM_RECURSIVE_PD;
     
     for (int i = 0; i < PDE_COUNT; i++) {
