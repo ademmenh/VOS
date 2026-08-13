@@ -7,6 +7,7 @@ static VfsNode *lookupRamfsNode(VfsNode *parent, const char *name);
 static int readRamfsNode(VfsNode *node, uint32_t offset, uint32_t size, uint8_t *buffer);
 static int writeRamfsNode(VfsNode *node, uint32_t offset, uint32_t size, uint8_t *buffer);
 static int ramfs_readlink(VfsNode *node, char *buf, uint32_t size);
+static int ramfs_getdents(VfsNode *node, uint32_t offset, struct dirent *dirp, uint32_t count);
 static RamfsNode *convertToRamfsNode(VfsNode *node);
 static RamfsNode *allocateRamfsNode(const char *name, uint32_t type);
 
@@ -20,7 +21,8 @@ static VfsOps ramfs_ops = {
     .lookupNode = lookupRamfsNode,
     .createNode = createRamfsNode,
     .statNode = NULL,
-    .readlinkNode = ramfs_readlink
+    .readlinkNode = ramfs_readlink,
+    .getdentsNode = ramfs_getdents
 };
 
 void initRamfs() {
@@ -97,6 +99,30 @@ static int ramfs_readlink(VfsNode* node, char* buf, uint32_t size) {
     if (len > size) len = size;
     memcpy(buf, ram_node->data, len);
     return len;
+}
+
+static int ramfs_getdents(VfsNode *node, uint32_t offset, struct dirent *dirp, uint32_t count) {
+    RamfsNode *ram_node = convertToRamfsNode(node);
+    if (ram_node->vfs.type != VFS_TYPE_DIRECTORY) return -1;
+    
+    if (count < sizeof(struct dirent)) return -1;
+    
+    RamfsNode *child = ram_node->first_child;
+    uint32_t current_idx = 0;
+    while (child && current_idx < offset) {
+        child = child->next_sibling;
+        current_idx++;
+    }
+    
+    if (!child) return 0;
+    
+    dirp->d_ino = (uint32_t)child;
+    dirp->d_off = offset + 1;
+    dirp->d_reclen = sizeof(struct dirent);
+    strncpy(dirp->d_name, child->vfs.name, sizeof(dirp->d_name) - 1);
+    dirp->d_name[sizeof(dirp->d_name) - 1] = '\0';
+    
+    return sizeof(struct dirent);
 }
 
 static RamfsNode* allocateRamfsNode(const char* name, uint32_t type) {

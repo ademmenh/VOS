@@ -28,6 +28,8 @@ void *syscalls[MAX_SYSCALLS] = {
     [SYS_DUP2] = sys_dup2,
     [SYS_CLEAR] = sys_clear,
     [SYS_LIST_MOUNTS] = sys_list_mounts,
+    [SYS_MKDIR] = sys_mkdir,
+    [SYS_GETDENTS] = sys_getdents,
 };
 
 void handleSyscall(InterruptRegisters *regs) {
@@ -53,9 +55,12 @@ void handleSyscall(InterruptRegisters *regs) {
     } else if (regs->eax == SYS_CLOSE || regs->eax == SYS_EXIT || regs->eax == SYS_MUNMAP || regs->eax == SYS_SBRK || regs->eax == SYS_WAIT || regs->eax == SYS_CHDIR || regs->eax == SYS_CLEAR) {
         Syscall1 sc = (Syscall1)location;
         ret = (int)sc(regs->ebx);
-    } else if (regs->eax == SYS_STAT || regs->eax == SYS_FSTAT || regs->eax == SYS_LSTAT || regs->eax == SYS_SYMLINK || regs->eax == SYS_GETCWD || regs->eax == SYS_DUP2 || regs->eax == SYS_LIST_MOUNTS) {
+    } else if (regs->eax == SYS_STAT || regs->eax == SYS_FSTAT || regs->eax == SYS_LSTAT || regs->eax == SYS_SYMLINK || regs->eax == SYS_GETCWD || regs->eax == SYS_DUP2 || regs->eax == SYS_LIST_MOUNTS || regs->eax == SYS_MKDIR) {
         Syscall2 sc = (Syscall2)location;
         ret = sc(regs->ebx, regs->ecx);
+    } else if (regs->eax == SYS_GETDENTS) {
+        Syscall3 sc = (Syscall3)location;
+        ret = sc(regs->ebx, regs->ecx, regs->edx);
     } else if (regs->eax == SYS_FORK) {
         int (*sc)(InterruptRegisters*) = (int (*)(InterruptRegisters*))location;
         ret = sc(regs);

@@ -3,6 +3,7 @@
 
 #include "routines/idt.h"
 #include "storage/stat.h"
+#include "storage/dirent.h"
 #include <stddef.h>
 
 #define MAX_SYSCALLS 255
@@ -28,6 +29,8 @@
 #define SYS_DUP2      19
 #define SYS_CLEAR     20
 #define SYS_LIST_MOUNTS 21
+#define SYS_MKDIR     22
+#define SYS_GETDENTS  23
 
 #define PROT_NONE  0x0
 #define PROT_READ  0x1
@@ -62,5 +65,7 @@ int sys_getcwd(char *buf, size_t size);
 int sys_dup2(int oldfd, int newfd);
 int sys_clear();
 int sys_list_mounts(char *buf, size_t size);
+int sys_mkdir(const char *path, int mode);
+int sys_getdents(int fd, struct dirent *dirp, unsigned int count);
 
 #endif

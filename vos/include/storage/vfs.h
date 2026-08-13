@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "storage/stat.h"
+#include "storage/dirent.h"
 
 #define VFS_TYPE_FILE        0x01
 #define VFS_TYPE_DIRECTORY   0x02
@@ -24,6 +25,7 @@ struct VfsOps {
     VfsNode *(*createNode)(VfsNode *parent, const char *name, uint32_t type);
     int (*statNode)(VfsNode *node, struct StatBuf *buf);
     int (*readlinkNode)(VfsNode *node, char *buf, uint32_t size);
+    int (*getdentsNode)(VfsNode *node, uint32_t offset, struct dirent *dirp, uint32_t count);
 };
 
 struct VfsNode {
@@ -61,6 +63,8 @@ VfsNode *createVfsNode(VfsNode *parent, const char *name, uint32_t type);
 int statVfsNode(VfsNode *node, struct StatBuf *buf);
 
 int readVfsLink(VfsNode *node, char *buf, uint32_t size);
+
+int getdentsVfsNode(VfsNode *node, uint32_t offset, struct dirent *dirp, uint32_t count);
 
 VfsNode *openVfsPathEx(VfsMount* root_mount, const char *path, int follow_last);
 

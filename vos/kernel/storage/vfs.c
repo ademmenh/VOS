@@ -258,3 +258,8 @@ void resolvePath(const char *path, const char *cwd, char *out_path) {
     if (strlen(stack) == 0) strcpy(stack, "/");
     strcpy(out_path, stack);
 }
+
+int getdentsVfsNode(VfsNode *node, uint32_t offset, struct dirent *dirp, uint32_t count) {
+    if (!node || !node->ops || !node->ops->getdentsNode) return -1;
+    return node->ops->getdentsNode(node, offset, dirp, count);
+}

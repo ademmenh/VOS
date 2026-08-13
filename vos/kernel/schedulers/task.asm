@@ -9,11 +9,13 @@ taskTrampoline:
 
 global userTrampoline
 userTrampoline:
+    push eax
     mov ax, 0x23
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
+    pop eax
     iret
 
 contextSwitch:

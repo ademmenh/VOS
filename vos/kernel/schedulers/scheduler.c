@@ -171,7 +171,7 @@ int addTask(Scheduler *scheduler, const char *filename) {
 
     uint32_t *kernel_top = (uint32_t*)physicalToVirtual(phys_top);
     *(--kernel_top) = 0x23;                                  // SS
-    *(--kernel_top) = (uint32_t)USER_STACK_TOP;              // ESP
+    *(--kernel_top) = (uint32_t)(USER_STACK_TOP - 16);       // ESP (Leave space for dummy frame)
     *(--kernel_top) = 0x202;                                 // EFLAGS
     *(--kernel_top) = 0x1B;                                  // CS
     *(--kernel_top) = (uint32_t)entry;                       // EIP
