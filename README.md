@@ -23,7 +23,8 @@ project/
 
 The Makefile supports the following commands:
 
-- `make dependencies`: Install required tools automatically (`gcc`, `ld`, `nasm`, etc.).
+- `make dependencies`: Install required tools automatically on Fedora/RHEL (`gcc`, `ld`, `nasm`, etc.).
+- `make arch-dependencies`: Install required tools on Arch Linux (`nasm`, `base-devel`, `qemu-full`, etc.).
 - `make emulate`: Run OS in QEMU.
 - `make demulate`: Run QEMU in debug mode waiting for GDB.
 - `make clean`: Removes everything in `build/` and `iso/`.

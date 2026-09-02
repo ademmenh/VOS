@@ -2,7 +2,7 @@ PACKAGE_MGR	:= dnf
 ASM			:= nasm
 GCC			:= gcc
 LINKER		:= ld
-GRUB_MAKE	:= grub2-mkrescue
+GRUB_MAKE	:= $(shell command -v grub2-mkrescue 2>/dev/null || echo grub-mkrescue)
 QEMU		:= qemu-system-i386
 GDB			:= gdb
 
@@ -29,7 +29,7 @@ SHELL_SRC			:= $(SHELL_SRC_DIR)/shell.c $(SHELL_SRC_DIR)/lexer.c $(SHELL_SRC_DIR
 ISO					:= $(BUILD_DIR)/vos.iso
 DISO				:= $(BUILD_DIR)/vos.iso
 
-.PHONY: all dependencies clean setup bins dbins iso emulate debug demulate asm_bins c_bins c_debug_bins linker shell
+.PHONY: all dependencies arch-dependencies clean setup bins dbins iso emulate debug demulate asm_bins c_bins c_debug_bins linker shell
 
 all: iso
 
@@ -56,6 +56,9 @@ coreutils: $(COREUTILS_BINS)
 
 dependencies:
 	sudo $(PACKAGE_MGR) install $(ASM) $(GCC) $(LINKER) $(QEMU) glibc-devel.i686 libgcc.i686
+
+arch-dependencies:
+	sudo pacman -S $(ASM) base-devel qemu-full lib32-gcc-libs lib32-glibc grub
 
 setup:
 	@mkdir -p $(BUILD_DIR)/objects
