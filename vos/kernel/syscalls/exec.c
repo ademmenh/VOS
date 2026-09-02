@@ -108,7 +108,6 @@ int sys_execve(const char *path, char *const argv[], char *const envp[], Interru
     esp -= 4; *(uint32_t*)esp = uenvp;
     esp -= 4; *(uint32_t*)esp = uargv;
     esp -= 4; *(uint32_t*)esp = (uint32_t)argc;
-    esp -= 4; *(uint32_t*)esp = 0; // dummy return address
     // Update registers
     regs->eip = entry;
     regs->useresp = esp;
